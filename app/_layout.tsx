@@ -1,6 +1,5 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useFrameworkReady } from "@/hooks/useFrameworkReady";
 import {
   useFonts,
   Inter_400Regular,
@@ -10,8 +9,6 @@ import {
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export default function RootLayout() {
-  useFrameworkReady();
-
   const [fontsLoaded] = useFonts({
     "Inter-Regular": Inter_400Regular,
     "Inter-SemiBold": Inter_600SemiBold,
