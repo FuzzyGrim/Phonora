@@ -1,31 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { useSubsonicStore } from '@/store/subsonicStore';
-import { CircleCheck as CheckCircle2, Circle as XCircle } from 'lucide-react-native';
-import md5 from 'md5';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import { useSubsonicStore } from "@/store/subsonicStore";
+import {
+  CircleCheck as CheckCircle2,
+  Circle as XCircle,
+} from "lucide-react-native";
+import md5 from "md5";
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const { config, setConfig } = useSubsonicStore();
-  const [serverUrl, setServerUrl] = useState(config?.serverUrl || '');
-  const [username, setUsername] = useState(config?.username || '');
-  const [password, setPassword] = useState(config?.password || '');
+  const [serverUrl, setServerUrl] = useState(config?.serverUrl || "");
+  const [username, setUsername] = useState(config?.username || "");
+  const [password, setPassword] = useState(config?.password || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const validateInputs = () => {
     if (!serverUrl.trim()) {
-      setError('Server URL is required');
+      setError("Server URL is required");
       return false;
     }
     if (!username.trim()) {
-      setError('Username is required');
+      setError("Username is required");
       return false;
     }
     if (!password.trim()) {
-      setError('Password is required');
+      setError("Password is required");
       return false;
     }
     return true;
@@ -33,16 +44,22 @@ export default function SettingsScreen() {
 
   const testConnection = async (params: URLSearchParams) => {
     try {
-      const response = await fetch(`${serverUrl}/rest/ping.view?${params.toString()}`);
+      const response = await fetch(
+        `${serverUrl}/rest/ping.view?${params.toString()}`,
+      );
       const data = await response.json();
-      
-      if (data['subsonic-response'].status === 'ok') {
+
+      if (data["subsonic-response"].status === "ok") {
         return true;
       } else {
-        throw new Error(data['subsonic-response'].error?.message || 'Connection failed');
+        throw new Error(
+          data["subsonic-response"].error?.message || "Connection failed",
+        );
       }
     } catch (err) {
-      throw new Error('Could not connect to server. Please check your settings.');
+      throw new Error(
+        `Could not connect to server. Please check your settings. Details: ${err instanceof Error ? err.message : String(error)}`,
+      );
     }
   };
 
@@ -50,7 +67,7 @@ export default function SettingsScreen() {
     try {
       setError(null);
       setSuccess(false);
-      
+
       if (!validateInputs()) {
         return;
       }
@@ -61,7 +78,7 @@ export default function SettingsScreen() {
         serverUrl: serverUrl.trim(),
         username: username.trim(),
         password: password.trim(),
-        version: '1.16.1',
+        version: "1.16.1",
       };
 
       // Create auth params with the new config
@@ -72,25 +89,29 @@ export default function SettingsScreen() {
         t: token,
         s: salt,
         v: newConfig.version,
-        c: 'subsonicapp',
-        f: 'json',
+        c: "subsonicapp",
+        f: "json",
       });
 
       // Test the connection before saving
       await testConnection(params);
-      
+
       // If we get here, the connection was successful
       setConfig(newConfig);
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
       </View>
@@ -99,14 +120,16 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Server Configuration
           </Text>
-          
+
           {error && (
             <View style={[styles.messageContainer, styles.errorContainer]}>
               <XCircle color={colors.error} size={20} />
-              <Text style={[styles.messageText, { color: colors.error }]}>{error}</Text>
+              <Text style={[styles.messageText, { color: colors.error }]}>
+                {error}
+              </Text>
             </View>
           )}
-          
+
           {success && (
             <View style={[styles.messageContainer, styles.successContainer]}>
               <CheckCircle2 color={colors.success} size={20} />
@@ -121,11 +144,14 @@ export default function SettingsScreen() {
               Server URL
             </Text>
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                color: colors.text,
-                borderColor: colors.border
-              }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
               value={serverUrl}
               onChangeText={(text) => {
                 setServerUrl(text);
@@ -143,11 +169,14 @@ export default function SettingsScreen() {
               Username
             </Text>
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                color: colors.text,
-                borderColor: colors.border
-              }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
               value={username}
               onChangeText={(text) => {
                 setUsername(text);
@@ -165,11 +194,14 @@ export default function SettingsScreen() {
               Password
             </Text>
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                color: colors.text,
-                borderColor: colors.border
-              }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -187,10 +219,11 @@ export default function SettingsScreen() {
             style={[
               styles.button,
               { backgroundColor: colors.primary },
-              isLoading && styles.buttonDisabled
+              isLoading && styles.buttonDisabled,
             ]}
             onPress={handleSave}
-            disabled={isLoading}>
+            disabled={isLoading}
+          >
             {isLoading ? (
               <ActivityIndicator color={colors.text} />
             ) : (
@@ -215,7 +248,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Inter-Bold',
+    fontFamily: "Inter-Bold",
   },
   content: {
     padding: 20,
@@ -225,7 +258,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     marginBottom: 20,
   },
   inputGroup: {
@@ -233,7 +266,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     marginBottom: 8,
   },
   input: {
@@ -242,13 +275,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   button: {
     height: 45,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 20,
   },
   buttonDisabled: {
@@ -256,24 +289,24 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
   },
   messageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
   },
   successContainer: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
   },
   messageText: {
     marginLeft: 8,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
 });

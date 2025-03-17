@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { Search as SearchIcon } from 'lucide-react-native';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TextInput } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import { Search as SearchIcon } from "lucide-react-native";
 
 export default function SearchScreen() {
   const { colors } = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -39,8 +39,8 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
     borderRadius: 10,
   },
@@ -48,15 +48,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   text: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
 });

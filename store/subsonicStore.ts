@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import md5 from 'md5';
-import { Audio } from 'expo-av';
+import { create } from "zustand";
+import md5 from "md5";
+import { Audio } from "expo-av";
 
 export interface Song {
   id: string;
@@ -55,16 +55,20 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
   songs: [],
   isLoading: false,
   error: null,
+
   playback: {
     isPlaying: false,
     currentSong: null,
     sound: null,
   },
+
   setConfig: (config) => {
     set({ config, isAuthenticated: true });
     get().fetchSongs();
   },
+
   clearConfig: () => set({ config: null, isAuthenticated: false, songs: [] }),
+
   generateAuthParams: () => {
     const { config } = get();
     if (!config) return new URLSearchParams();
@@ -77,22 +81,25 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
       t: token,
       s: salt,
       v: config.version,
-      c: 'subsonicapp',
-      f: 'json',
+      c: "subsonicapp",
+      f: "json",
     });
   },
+
   getCoverArtUrl: (id: string) => {
     const { config } = get();
-    if (!config) return '';
+    if (!config) return "";
     const params = get().generateAuthParams();
     return `${config.serverUrl}/rest/getCoverArt.view?id=${id}&${params.toString()}`;
   },
+
   getStreamUrl: (id: string) => {
     const { config } = get();
-    if (!config) return '';
+    if (!config) return "";
     const params = get().generateAuthParams();
     return `${config.serverUrl}/rest/stream.view?id=${id}&${params.toString()}`;
   },
+
   fetchSongs: async () => {
     const { config } = get();
     if (!config) return;
@@ -102,27 +109,35 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
     try {
       const params = get().generateAuthParams();
       const response = await fetch(
-        `${config.serverUrl}/rest/getRandomSongs.view?size=100&${params.toString()}`
+        `${config.serverUrl}/rest/getRandomSongs.view?size=100&${params.toString()}`,
       );
       const data = await response.json();
 
-      if (data['subsonic-response'].status === 'ok') {
-        const songs = data['subsonic-response'].randomSongs.song.map((song: any) => ({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          album: song.album,
-          duration: song.duration,
-          coverArt: song.coverArt,
-        }));
+      if (data["subsonic-response"].status === "ok") {
+        const songs = data["subsonic-response"].randomSongs.song.map(
+          (song: any) => ({
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            duration: song.duration,
+            coverArt: song.coverArt,
+          }),
+        );
         set({ songs, isLoading: false });
       } else {
-        throw new Error(data['subsonic-response'].error?.message || 'Failed to fetch songs');
+        throw new Error(
+          data["subsonic-response"].error?.message || "Failed to fetch songs",
+        );
       }
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to fetch songs', isLoading: false });
+      set({
+        error: error instanceof Error ? error.message : "Failed to fetch songs",
+        isLoading: false,
+      });
     }
   },
+
   playSong: async (song: Song) => {
     try {
       const { sound: currentSound } = get().playback;
@@ -133,7 +148,7 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
       const streamUrl = get().getStreamUrl(song.id);
       const { sound } = await Audio.Sound.createAsync(
         { uri: streamUrl },
-        { shouldPlay: true }
+        { shouldPlay: true },
       );
 
       await Audio.setAudioModeAsync({
@@ -149,9 +164,10 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
         },
       });
     } catch (error) {
-      console.error('Error playing song:', error);
+      console.error("Error playing song:", error);
     }
   },
+
   pauseSong: async () => {
     const { sound } = get().playback;
     if (sound) {
@@ -161,6 +177,7 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
       }));
     }
   },
+
   resumeSong: async () => {
     const { sound } = get().playback;
     if (sound) {
@@ -170,6 +187,7 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
       }));
     }
   },
+
   stopSong: async () => {
     const { sound } = get().playback;
     if (sound) {
@@ -187,11 +205,11 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
   seekToPosition: async (positionMillis: number) => {
     const { sound } = get().playback;
     if (!sound) return;
-  
+
     try {
       await sound.setPositionAsync(positionMillis);
     } catch (error) {
-      console.error('Error seeking to position:', error);
+      console.error("Error seeking to position:", error);
     }
   },
 
@@ -199,7 +217,9 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
     const { songs, playback } = get();
     if (!playback.currentSong || songs.length === 0) return;
 
-    const currentIndex = songs.findIndex(song => song.id === playback.currentSong?.id);
+    const currentIndex = songs.findIndex(
+      (song) => song.id === playback.currentSong?.id,
+    );
     if (currentIndex === -1 || currentIndex === songs.length - 1) return;
 
     const nextSong = songs[currentIndex + 1];
@@ -210,7 +230,9 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
     const { songs, playback } = get();
     if (!playback.currentSong || songs.length === 0) return;
 
-    const currentIndex = songs.findIndex(song => song.id === playback.currentSong?.id);
+    const currentIndex = songs.findIndex(
+      (song) => song.id === playback.currentSong?.id,
+    );
     if (currentIndex === -1 || currentIndex === 0) return;
 
     const previousSong = songs[currentIndex - 1];
@@ -223,7 +245,10 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
 
     const status = await sound.getStatusAsync();
     if (status.isLoaded) {
-      const newPosition = Math.min(status.positionMillis + 10000, status.durationMillis || 0);
+      const newPosition = Math.min(
+        status.positionMillis + 10000,
+        status.durationMillis || 0,
+      );
       await sound.setPositionAsync(newPosition);
     }
   },

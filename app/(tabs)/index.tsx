@@ -1,27 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { useSubsonicStore } from '@/store/subsonicStore';
-import { Play, Pause, Music2 } from 'lucide-react-native';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import { useSubsonicStore } from "@/store/subsonicStore";
+import { Play, Pause, Music2 } from "lucide-react-native";
 
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const { 
-    songs, 
-    isLoading, 
-    error, 
-    fetchSongs, 
+  const {
+    songs,
+    isLoading,
+    error,
+    fetchSongs,
     getCoverArtUrl,
     playSong,
     pauseSong,
     resumeSong,
-    playback
+    playback,
   } = useSubsonicStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -45,7 +54,13 @@ export default function HomeScreen() {
 
   if (isLoading && !refreshing) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -53,12 +68,21 @@ export default function HomeScreen() {
 
   if (error) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
         <TouchableOpacity
           style={[styles.retryButton, { backgroundColor: colors.primary }]}
-          onPress={fetchSongs}>
-          <Text style={[styles.retryButtonText, { color: colors.text }]}>Retry</Text>
+          onPress={fetchSongs}
+        >
+          <Text style={[styles.retryButtonText, { color: colors.text }]}>
+            Retry
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -69,7 +93,8 @@ export default function HomeScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }>
+      }
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Your Music</Text>
       </View>
@@ -77,7 +102,9 @@ export default function HomeScreen() {
         {songs.length === 0 ? (
           <View style={styles.emptyState}>
             <Music2 size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.emptyStateText, { color: colors.textSecondary }]}
+            >
               No songs available
             </Text>
           </View>
@@ -86,42 +113,67 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={song.id}
               style={[
-                styles.songCard, 
-                { 
+                styles.songCard,
+                {
                   backgroundColor: colors.surface,
-                  borderColor: playback.currentSong?.id === song.id ? colors.primary : 'transparent',
+                  borderColor:
+                    playback.currentSong?.id === song.id
+                      ? colors.primary
+                      : "transparent",
                   borderWidth: playback.currentSong?.id === song.id ? 1 : 0,
-                }
-              ]}>
+                },
+              ]}
+            >
               {song.coverArt ? (
                 <Image
                   source={{ uri: getCoverArtUrl(song.coverArt) }}
                   style={styles.coverArt}
                 />
               ) : (
-                <View style={[styles.placeholderCover, { backgroundColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.placeholderCover,
+                    { backgroundColor: colors.border },
+                  ]}
+                >
                   <Music2 size={24} color={colors.textSecondary} />
                 </View>
               )}
               <View style={styles.songInfo}>
-                <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.songTitle, { color: colors.text }]}
+                  numberOfLines={1}
+                >
                   {song.title}
                 </Text>
-                <Text style={[styles.artistName, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  style={[styles.artistName, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
                   {song.artist}
                 </Text>
-                <Text style={[styles.albumName, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  style={[styles.albumName, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
                   {song.album}
                 </Text>
               </View>
               <View style={styles.songActions}>
-                <Text style={[styles.duration, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.duration, { color: colors.textSecondary }]}
+                >
                   {formatDuration(song.duration)}
                 </Text>
                 <TouchableOpacity
-                  style={[styles.playButton, { backgroundColor: colors.primary }]}
-                  onPress={() => handlePlayPress(song)}>
-                  {playback.currentSong?.id === song.id && playback.isPlaying ? (
+                  style={[
+                    styles.playButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => handlePlayPress(song)}
+                >
+                  {playback.currentSong?.id === song.id &&
+                  playback.isPlaying ? (
                     <Pause size={16} color={colors.text} />
                   ) : (
                     <Play size={16} color={colors.text} />
@@ -141,8 +193,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
     padding: 20,
@@ -150,17 +202,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Inter-Bold',
+    fontFamily: "Inter-Bold",
   },
   content: {
     padding: 20,
   },
   songCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   coverArt: {
     width: 56,
@@ -171,8 +223,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   songInfo: {
     flex: 1,
@@ -181,37 +233,37 @@ const styles = StyleSheet.create({
   },
   songTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     marginBottom: 4,
   },
   artistName: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     marginBottom: 2,
   },
   albumName: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   songActions: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   duration: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     marginBottom: 8,
   },
   playButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorText: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: "Inter-Regular",
+    textAlign: "center",
     marginBottom: 16,
   },
   retryButton: {
@@ -221,16 +273,16 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
   },
   emptyStateText: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     marginTop: 16,
   },
 });

@@ -1,26 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, Dimensions, Animated } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { useSubsonicStore, Song } from '@/store/subsonicStore';
-import { 
-  Play, Pause, SkipForward, SkipBack, ChevronDown, 
-  Repeat, Shuffle, Rewind, FastForward, Music2 
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import Slider from '@react-native-community/slider';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  Animated,
+} from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import { useSubsonicStore, Song } from "@/store/subsonicStore";
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  ChevronDown,
+  Repeat,
+  Shuffle,
+  Rewind,
+  FastForward,
+  Music2,
+} from "lucide-react-native";
+import { useRouter } from "expo-router";
+import Slider from "@react-native-community/slider";
 
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
-  const { 
-    playback, 
-    pauseSong, 
-    resumeSong, 
+  const {
+    playback,
+    pauseSong,
+    resumeSong,
     getCoverArtUrl,
     songs,
     skipToNext,
@@ -29,7 +45,7 @@ export default function PlayerScreen() {
     seekBackward,
     setPlaybackRate,
     playSong,
-    seekToPosition
+    seekToPosition,
   } = useSubsonicStore();
   const router = useRouter();
   const [isRepeat, setIsRepeat] = useState(false);
@@ -39,12 +55,12 @@ export default function PlayerScreen() {
 
   // Define currentSong at component level
   const currentSong = playback.currentSong || {
-    id: '',
-    title: 'No song playing',
-    artist: '',
-    album: '',
+    id: "",
+    title: "No song playing",
+    artist: "",
+    album: "",
     duration: 0,
-    coverArt: ''
+    coverArt: "",
   };
 
   // Animated values for the playing indicator
@@ -55,7 +71,11 @@ export default function PlayerScreen() {
   // Animation sequence for the playing indicator
   useEffect(() => {
     // Create reusable animation sequence
-    const createBarAnimation = (value: Animated.Value, toValue: number, delay: number) => {
+    const createBarAnimation = (
+      value: Animated.Value,
+      toValue: number,
+      delay: number,
+    ) => {
       return Animated.sequence([
         Animated.delay(delay),
         Animated.timing(value, {
@@ -82,7 +102,7 @@ export default function PlayerScreen() {
             createBarAnimation(bar3Height, 13, 400),
             createBarAnimation(bar3Height, 5, 0),
           ]),
-        ])
+        ]),
       );
     };
 
@@ -101,7 +121,6 @@ export default function PlayerScreen() {
     return () => {
       animation.stop();
     };
-
   }, [playback.isPlaying, currentSong.id, bar1Height, bar2Height, bar3Height]);
 
   // Update position for progress bar
@@ -200,7 +219,7 @@ export default function PlayerScreen() {
         style={[
           styles.songItem,
           isCurrentSong && styles.currentSongItem,
-          { backgroundColor: isCurrentSong ? colors.surface : 'transparent' }
+          { backgroundColor: isCurrentSong ? colors.surface : "transparent" },
         ]}
         onPress={() => handleSongPress(item)}
       >
@@ -210,37 +229,37 @@ export default function PlayerScreen() {
               source={{ uri: getCoverArtUrl(item.coverArt) }}
               style={[
                 styles.songCoverArt,
-                isCurrentSong && styles.currentSongCoverArt
+                isCurrentSong && styles.currentSongCoverArt,
               ]}
             />
           ) : (
-            <View 
+            <View
               style={[
-                styles.placeholderCover, 
+                styles.placeholderCover,
                 isCurrentSong && styles.currentSongCoverArt,
-                { backgroundColor: colors.border }
+                { backgroundColor: colors.border },
               ]}
             >
-              <Music2 size={isCurrentSong ? 24 : 16} color={colors.textSecondary} />
+              <Music2
+                size={isCurrentSong ? 24 : 16}
+                color={colors.textSecondary}
+              />
             </View>
           )}
 
           <View style={styles.songItemDetails}>
-            <Text 
+            <Text
               style={[
-                styles.songItemTitle, 
+                styles.songItemTitle,
                 isCurrentSong && styles.currentSongText,
-                { color: isCurrentSong ? colors.primary : colors.text }
-              ]} 
+                { color: isCurrentSong ? colors.primary : colors.text },
+              ]}
               numberOfLines={1}
             >
               {item.title}
             </Text>
-            <Text 
-              style={[
-                styles.songItemArtist, 
-                { color: colors.textSecondary }
-              ]} 
+            <Text
+              style={[styles.songItemArtist, { color: colors.textSecondary }]}
               numberOfLines={1}
             >
               {item.artist}
@@ -249,32 +268,32 @@ export default function PlayerScreen() {
 
           {isCurrentSong && (
             <View style={styles.nowPlayingIndicator}>
-              <Animated.View 
+              <Animated.View
                 style={[
-                  styles.playingBar, 
-                  { 
+                  styles.playingBar,
+                  {
                     backgroundColor: colors.primary,
-                    height: bar1Height 
-                  }
-                ]} 
+                    height: bar1Height,
+                  },
+                ]}
               />
-              <Animated.View 
+              <Animated.View
                 style={[
-                  styles.playingBar, 
-                  { 
+                  styles.playingBar,
+                  {
                     backgroundColor: colors.primary,
-                    height: bar2Height 
-                  }
-                ]} 
+                    height: bar2Height,
+                  },
+                ]}
               />
-              <Animated.View 
+              <Animated.View
                 style={[
-                  styles.playingBar, 
-                  { 
+                  styles.playingBar,
+                  {
                     backgroundColor: colors.primary,
-                    height: bar3Height 
-                  }
-                ]} 
+                    height: bar3Height,
+                  },
+                ]}
               />
             </View>
           )}
@@ -286,10 +305,15 @@ export default function PlayerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+        >
           <ChevronDown size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Now Playing</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Now Playing
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -335,22 +359,34 @@ export default function PlayerScreen() {
         </View>
 
         <View style={styles.mainControls}>
-          <TouchableOpacity onPress={toggleShuffle} style={styles.controlButton}>
-            <Shuffle 
-              size={24} 
-              color={isShuffle ? colors.primary : colors.textSecondary} 
+          <TouchableOpacity
+            onPress={toggleShuffle}
+            style={styles.controlButton}
+          >
+            <Shuffle
+              size={24}
+              color={isShuffle ? colors.primary : colors.textSecondary}
             />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleSkipPrevious} style={styles.controlButton}>
+          <TouchableOpacity
+            onPress={handleSkipPrevious}
+            style={styles.controlButton}
+          >
             <SkipBack size={28} color={colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleSeekBackward} style={styles.controlButton}>
+          <TouchableOpacity
+            onPress={handleSeekBackward}
+            style={styles.controlButton}
+          >
             <Rewind size={24} color={colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handlePlayPause} style={styles.playPauseButton}>
+          <TouchableOpacity
+            onPress={handlePlayPause}
+            style={styles.playPauseButton}
+          >
             {playback.isPlaying ? (
               <Pause size={32} color="#ffffff" />
             ) : (
@@ -358,24 +394,30 @@ export default function PlayerScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleSeekForward} style={styles.controlButton}>
+          <TouchableOpacity
+            onPress={handleSeekForward}
+            style={styles.controlButton}
+          >
             <FastForward size={24} color={colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleSkipNext} style={styles.controlButton}>
+          <TouchableOpacity
+            onPress={handleSkipNext}
+            style={styles.controlButton}
+          >
             <SkipForward size={28} color={colors.text} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={toggleRepeat} style={styles.controlButton}>
-            <Repeat 
-              size={24} 
-              color={isRepeat ? colors.primary : colors.textSecondary} 
+            <Repeat
+              size={24}
+              color={isRepeat ? colors.primary : colors.textSecondary}
             />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          onPress={changePlaybackSpeed} 
+        <TouchableOpacity
+          onPress={changePlaybackSpeed}
           style={[styles.speedButton, { borderColor: colors.border }]}
         >
           <Text style={[styles.speedText, { color: colors.text }]}>
@@ -392,9 +434,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
@@ -404,7 +446,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
   },
   placeholder: {
     width: 40,
@@ -426,8 +468,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   songItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   songCoverArt: {
     width: 50,
@@ -444,15 +486,15 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 4,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   songItemDetails: {
     flex: 1,
   },
   songItemTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     marginBottom: 4,
   },
   currentSongText: {
@@ -460,11 +502,11 @@ const styles = StyleSheet.create({
   },
   songItemArtist: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   nowPlayingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     height: 16,
     width: 20,
     marginLeft: 8,
@@ -479,44 +521,44 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    borderTopColor: "rgba(0,0,0,0.1)",
   },
   songDetails: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   songTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: "Inter-Bold",
     marginBottom: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   songArtist: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: "Inter-Regular",
+    textAlign: "center",
   },
   progressContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 16,
   },
   progressBar: {
-    width: '100%',
+    width: "100%",
     height: 40,
   },
   timeInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   timeText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   mainControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
     marginBottom: 16,
   },
   controlButton: {
@@ -526,19 +568,19 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#4F46E5', // Indigo color
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#4F46E5", // Indigo color
+    justifyContent: "center",
+    alignItems: "center",
   },
   speedButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   speedText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
 });

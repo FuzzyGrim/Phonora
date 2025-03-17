@@ -1,13 +1,14 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { useSubsonicStore } from '@/store/subsonicStore';
-import { Play, Pause, SkipForward, Music2 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import { useSubsonicStore } from "@/store/subsonicStore";
+import { Play, Pause, SkipForward, Music2 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 
 export default function MiniPlayer() {
   const { colors } = useTheme();
-  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl } = useSubsonicStore();
+  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl } =
+    useSubsonicStore();
   const router = useRouter();
 
   if (!playback.currentSong) return null;
@@ -25,11 +26,11 @@ export default function MiniPlayer() {
   };
 
   const openFullPlayer = () => {
-    router.push('/player');
+    router.push("/player");
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.surface }]}
       onPress={openFullPlayer}
     >
@@ -40,15 +41,26 @@ export default function MiniPlayer() {
             style={styles.coverArt}
           />
         ) : (
-          <View style={[styles.placeholderCover, { backgroundColor: colors.border }]}>
+          <View
+            style={[
+              styles.placeholderCover,
+              { backgroundColor: colors.border },
+            ]}
+          >
             <Music2 size={16} color={colors.textSecondary} />
           </View>
         )}
         <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {playback.currentSong.title}
           </Text>
-          <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text
+            style={[styles.artist, { color: colors.textSecondary }]}
+            numberOfLines={1}
+          >
             {playback.currentSong.artist}
           </Text>
         </View>
@@ -72,15 +84,15 @@ export default function MiniPlayer() {
 const styles = StyleSheet.create({
   container: {
     height: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     borderTopWidth: 1,
   },
   songInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   coverArt: {
@@ -94,23 +106,23 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 4,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   textContainer: {
     flex: 1,
   },
   title: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
   },
   artist: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   button: {
     padding: 8,
