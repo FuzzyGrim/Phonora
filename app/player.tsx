@@ -1,0 +1,509 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, Dimensions, Animated } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { useSubsonicStore, Song } from '@/store/subsonicStore';
+import { 
+  Play, Pause, SkipForward, SkipBack, ChevronDown, 
+  Repeat, Shuffle, Rewind, FastForward, Music2 
+} from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import Slider from '@react-native-community/slider';
+
+const { width } = Dimensions.get('window');
+
+function formatDuration(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+export default function PlayerScreen() {
+  const { colors } = useTheme();
+  const { 
+    playback, 
+    pauseSong, 
+    resumeSong, 
+    getCoverArtUrl,
+    songs,
+    skipToNext,
+    skipToPrevious,
+    seekForward,
+    seekBackward,
+    setPlaybackRate,
+    playSong,
+    seekToPosition
+  } = useSubsonicStore();
+  const router = useRouter();
+  const [isRepeat, setIsRepeat] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [position, setPosition] = useState(0);
+
+  // Animated values for the playing indicator
+  const bar1Height = useRef(new Animated.Value(3)).current;
+  const bar2Height = useRef(new Animated.Value(8)).current;
+  const bar3Height = useRef(new Animated.Value(5)).current;
+
+  // Animation sequence for the playing indicator
+  useEffect(() => {
+    if (playback.isPlaying) {
+      const createAnimation = (value: Animated.Value, toValue: number, delay: number) => {
+        return Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(value, {
+            toValue,
+            duration: 300,
+            useNativeDriver: false,
+          }),
+        ]);
+      };
+
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            createAnimation(bar1Height, 12, 0),
+            createAnimation(bar1Height, 3, 0),
+          ]),
+          Animated.sequence([
+            createAnimation(bar2Height, 4, 200),
+            createAnimation(bar2Height, 10, 0),
+          ]),
+          Animated.sequence([
+            createAnimation(bar3Height, 13, 400),
+            createAnimation(bar3Height, 5, 0),
+          ]),
+        ])
+      ).start();
+    }
+  }, [playback.isPlaying, bar1Height, bar2Height, bar3Height]);
+
+  // Update position for progress bar
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (playback.isPlaying && playback.sound) {
+      interval = setInterval(async () => {
+        if (playback.sound) {
+          const status = await playback.sound.getStatusAsync();
+          if (status.isLoaded) {
+            setPosition(status.positionMillis / 1000);
+          }
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [playback.isPlaying, playback.sound]);
+
+  if (!playback.currentSong) {
+    router.back();
+    return null;
+  }
+
+  const handlePlayPause = async () => {
+    if (playback.isPlaying) {
+      await pauseSong();
+    } else {
+      await resumeSong();
+    }
+  };
+
+  const handleSkipNext = () => {
+    skipToNext();
+  };
+
+  const handleSkipPrevious = () => {
+    skipToPrevious();
+  };
+
+  const handleSeekBackward = () => {
+    seekBackward();
+  };
+
+  const handleSeekForward = () => {
+    seekForward();
+  };
+
+  const toggleRepeat = () => {
+    setIsRepeat(!isRepeat);
+  };
+
+  const toggleShuffle = () => {
+    setIsShuffle(!isShuffle);
+  };
+
+  const changePlaybackSpeed = () => {
+    // Cycle through speeds: 1.0 -> 1.25 -> 1.5 -> 0.75 -> 1.0
+    const speeds = [1.0, 1.25, 1.5, 0.75, 1.0];
+    const currentIndex = speeds.indexOf(playbackSpeed);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    const newSpeed = speeds[nextIndex];
+    setPlaybackSpeed(newSpeed);
+    setPlaybackRate(newSpeed);
+  };
+
+  const handleSongPress = (song: Song) => {
+    playSong(song);
+  };
+
+  const handleSliderChange = (value: number) => {
+    setPosition(value);
+    seekToPosition(value * 1000); // Convert to milliseconds
+  };
+
+  type RenderItemProps = {
+    item: Song;
+  };
+
+  const renderSongItem = ({ item }: RenderItemProps) => {
+    const isCurrentSong = item.id === playback.currentSong?.id;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.songItem,
+          isCurrentSong && styles.currentSongItem,
+          { backgroundColor: isCurrentSong ? colors.surface : 'transparent' }
+        ]}
+        onPress={() => handleSongPress(item)}
+      >
+        <View style={styles.songItemContent}>
+          {item.coverArt ? (
+            <Image
+              source={{ uri: getCoverArtUrl(item.coverArt) }}
+              style={[
+                styles.songCoverArt,
+                isCurrentSong && styles.currentSongCoverArt
+              ]}
+            />
+          ) : (
+            <View 
+              style={[
+                styles.placeholderCover, 
+                isCurrentSong && styles.currentSongCoverArt,
+                { backgroundColor: colors.border }
+              ]}
+            >
+              <Music2 size={isCurrentSong ? 24 : 16} color={colors.textSecondary} />
+            </View>
+          )}
+
+          <View style={styles.songItemDetails}>
+            <Text 
+              style={[
+                styles.songItemTitle, 
+                isCurrentSong && styles.currentSongText,
+                { color: isCurrentSong ? colors.primary : colors.text }
+              ]} 
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+            <Text 
+              style={[
+                styles.songItemArtist, 
+                { color: colors.textSecondary }
+              ]} 
+              numberOfLines={1}
+            >
+              {item.artist}
+            </Text>
+          </View>
+
+          {isCurrentSong && playback.isPlaying && (
+            <View style={styles.nowPlayingIndicator}>
+              <Animated.View 
+                style={[
+                  styles.playingBar, 
+                  { 
+                    backgroundColor: colors.primary,
+                    height: bar1Height 
+                  }
+                ]} 
+              />
+              <Animated.View 
+                style={[
+                  styles.playingBar, 
+                  { 
+                    backgroundColor: colors.primary,
+                    height: bar2Height 
+                  }
+                ]} 
+              />
+              <Animated.View 
+                style={[
+                  styles.playingBar, 
+                  { 
+                    backgroundColor: colors.primary,
+                    height: bar3Height 
+                  }
+                ]} 
+              />
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+          <ChevronDown size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Now Playing</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <View style={styles.songListContainer}>
+        <FlatList
+          data={songs}
+          renderItem={renderSongItem}
+          keyExtractor={(item: Song) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.songListContent}
+        />
+      </View>
+
+      <View style={styles.playerControls}>
+        <View style={styles.songDetails}>
+          <Text style={[styles.songTitle, { color: colors.text }]}>
+            {playback.currentSong.title}
+          </Text>
+          <Text style={[styles.songArtist, { color: colors.textSecondary }]}>
+            {playback.currentSong.artist}
+          </Text>
+        </View>
+
+        <View style={styles.progressContainer}>
+          <Slider
+            style={styles.progressBar}
+            minimumValue={0}
+            maximumValue={playback.currentSong.duration}
+            value={position}
+            onValueChange={handleSliderChange}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.primary}
+          />
+          <View style={styles.timeInfo}>
+            <Text style={[styles.timeText, { color: colors.textSecondary }]}>
+              {formatDuration(Math.floor(position))}
+            </Text>
+            <Text style={[styles.timeText, { color: colors.textSecondary }]}>
+              {formatDuration(playback.currentSong.duration)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.mainControls}>
+          <TouchableOpacity onPress={toggleShuffle} style={styles.controlButton}>
+            <Shuffle 
+              size={24} 
+              color={isShuffle ? colors.primary : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSkipPrevious} style={styles.controlButton}>
+            <SkipBack size={28} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSeekBackward} style={styles.controlButton}>
+            <Rewind size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handlePlayPause} style={styles.playPauseButton}>
+            {playback.isPlaying ? (
+              <Pause size={32} color="#ffffff" />
+            ) : (
+              <Play size={32} color="#ffffff" />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSeekForward} style={styles.controlButton}>
+            <FastForward size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSkipNext} style={styles.controlButton}>
+            <SkipForward size={28} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={toggleRepeat} style={styles.controlButton}>
+            <Repeat 
+              size={24} 
+              color={isRepeat ? colors.primary : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity 
+          onPress={changePlaybackSpeed} 
+          style={[styles.speedButton, { borderColor: colors.border }]}
+        >
+          <Text style={[styles.speedText, { color: colors.text }]}>
+            {playbackSpeed}x
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  placeholder: {
+    width: 40,
+  },
+  songListContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  songListContent: {
+    paddingBottom: 16,
+  },
+  songItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  currentSongItem: {
+    paddingVertical: 12,
+  },
+  songItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  songCoverArt: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  currentSongCoverArt: {
+    width: 60,
+    height: 60,
+  },
+  placeholderCover: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  songItemDetails: {
+    flex: 1,
+  },
+  songItemTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 4,
+  },
+  currentSongText: {
+    fontSize: 16,
+  },
+  songItemArtist: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  nowPlayingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 16,
+    width: 20,
+    marginLeft: 8,
+  },
+  playingBar: {
+    width: 4,
+    marginHorizontal: 1,
+    borderRadius: 2,
+  },
+  playerControls: {
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  songDetails: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  songTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  songArtist: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+  },
+  progressContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  progressBar: {
+    width: '100%',
+    height: 40,
+  },
+  timeInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timeText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  mainControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 16,
+  },
+  controlButton: {
+    padding: 8,
+  },
+  playPauseButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#4F46E5', // Indigo color
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  speedButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignSelf: 'center',
+  },
+  speedText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+});

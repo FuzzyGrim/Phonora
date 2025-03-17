@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import md5 from 'md5';
 import { Audio } from 'expo-av';
 
-interface Song {
+export interface Song {
   id: string;
   title: string;
   artist: string;
@@ -41,6 +41,12 @@ interface SubsonicState {
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
+  seekToPosition: (positionMillis: number) => Promise<void>;
+  skipToNext: () => Promise<void>;
+  skipToPrevious: () => Promise<void>;
+  seekForward: () => Promise<void>;
+  seekBackward: () => Promise<void>;
+  setPlaybackRate: (speed: number) => Promise<void>;
 }
 
 export const useSubsonicStore = create<SubsonicState>((set, get) => ({
@@ -176,5 +182,67 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
         },
       });
     }
+  },
+
+  seekToPosition: async (positionMillis: number) => {
+    const { sound } = get().playback;
+    if (!sound) return;
+  
+    try {
+      await sound.setPositionAsync(positionMillis);
+    } catch (error) {
+      console.error('Error seeking to position:', error);
+    }
+  },
+
+  skipToNext: async () => {
+    const { songs, playback } = get();
+    if (!playback.currentSong || songs.length === 0) return;
+
+    const currentIndex = songs.findIndex(song => song.id === playback.currentSong?.id);
+    if (currentIndex === -1 || currentIndex === songs.length - 1) return;
+
+    const nextSong = songs[currentIndex + 1];
+    await get().playSong(nextSong);
+  },
+
+  skipToPrevious: async () => {
+    const { songs, playback } = get();
+    if (!playback.currentSong || songs.length === 0) return;
+
+    const currentIndex = songs.findIndex(song => song.id === playback.currentSong?.id);
+    if (currentIndex === -1 || currentIndex === 0) return;
+
+    const previousSong = songs[currentIndex - 1];
+    await get().playSong(previousSong);
+  },
+
+  seekForward: async () => {
+    const { sound } = get().playback;
+    if (!sound) return;
+
+    const status = await sound.getStatusAsync();
+    if (status.isLoaded) {
+      const newPosition = Math.min(status.positionMillis + 10000, status.durationMillis || 0);
+      await sound.setPositionAsync(newPosition);
+    }
+  },
+
+  seekBackward: async () => {
+    const { sound } = get().playback;
+    if (!sound) return;
+
+    const status = await sound.getStatusAsync();
+    if (status.isLoaded) {
+      const newPosition = Math.max(status.positionMillis - 10000, 0);
+      await sound.setPositionAsync(newPosition);
+    }
+  },
+
+  setPlaybackRate: async (speed: number) => {
+    const { sound } = get().playback;
+    if (!sound) return;
+
+    await sound.setRateAsync(speed, true);
   },
 }));
