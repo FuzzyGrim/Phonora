@@ -9,8 +9,6 @@ import {
 import { useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
 
-const { width } = Dimensions.get('window');
-
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -39,6 +37,16 @@ export default function PlayerScreen() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [position, setPosition] = useState(0);
 
+  // Define currentSong at component level
+  const currentSong = playback.currentSong || {
+    id: '',
+    title: 'No song playing',
+    artist: '',
+    album: '',
+    duration: 0,
+    coverArt: ''
+  };
+
   // Animated values for the playing indicator
   const bar1Height = useRef(new Animated.Value(3)).current;
   const bar2Height = useRef(new Animated.Value(8)).current;
@@ -46,39 +54,71 @@ export default function PlayerScreen() {
 
   // Animation sequence for the playing indicator
   useEffect(() => {
-    if (playback.isPlaying) {
-      const createAnimation = (value: Animated.Value, toValue: number, delay: number) => {
-        return Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(value, {
-            toValue,
-            duration: 300,
-            useNativeDriver: false,
-          }),
-        ]);
-      };
+    // Create reusable animation sequence
+    const createBarAnimation = (value: Animated.Value, toValue: number, delay: number) => {
+      return Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(value, {
+          toValue,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]);
+    };
 
-      Animated.loop(
+    // Create the complete animation sequence
+    const createFullAnimation = () => {
+      return Animated.loop(
         Animated.parallel([
           Animated.sequence([
-            createAnimation(bar1Height, 12, 0),
-            createAnimation(bar1Height, 3, 0),
+            createBarAnimation(bar1Height, 12, 0),
+            createBarAnimation(bar1Height, 3, 0),
           ]),
           Animated.sequence([
-            createAnimation(bar2Height, 4, 200),
-            createAnimation(bar2Height, 10, 0),
+            createBarAnimation(bar2Height, 4, 200),
+            createBarAnimation(bar2Height, 10, 0),
           ]),
           Animated.sequence([
-            createAnimation(bar3Height, 13, 400),
-            createAnimation(bar3Height, 5, 0),
+            createBarAnimation(bar3Height, 13, 400),
+            createBarAnimation(bar3Height, 5, 0),
           ]),
         ])
-      ).start();
+      );
+    };
+
+    // Initialize animation
+    const animation = createFullAnimation();
+
+    // Start or pause the animation based on playback state
+    if (playback.isPlaying) {
+      animation.start();
+    } else {
+      // For paused state, don't reset the values, just stop the animation
+      animation.stop();
     }
-  }, [playback.isPlaying, bar1Height, bar2Height, bar3Height]);
+
+    // Cleanup function to stop animation when unmounting
+    return () => {
+      animation.stop();
+    };
+
+  }, [playback.isPlaying, currentSong.id, bar1Height, bar2Height, bar3Height]);
 
   // Update position for progress bar
   useEffect(() => {
+    // Immediately get current position when component mounts
+    const getInitialPosition = async () => {
+      if (playback.sound) {
+        const status = await playback.sound.getStatusAsync();
+        if (status.isLoaded) {
+          setPosition(status.positionMillis / 1000);
+        }
+      }
+    };
+
+    // Call it right away
+    getInitialPosition();
+
     let interval: NodeJS.Timeout;
 
     if (playback.isPlaying && playback.sound) {
@@ -96,11 +136,6 @@ export default function PlayerScreen() {
       if (interval) clearInterval(interval);
     };
   }, [playback.isPlaying, playback.sound]);
-
-  if (!playback.currentSong) {
-    router.back();
-    return null;
-  }
 
   const handlePlayPause = async () => {
     if (playback.isPlaying) {
@@ -158,7 +193,7 @@ export default function PlayerScreen() {
   };
 
   const renderSongItem = ({ item }: RenderItemProps) => {
-    const isCurrentSong = item.id === playback.currentSong?.id;
+    const isCurrentSong = item.id === currentSong.id;
 
     return (
       <TouchableOpacity
@@ -212,7 +247,7 @@ export default function PlayerScreen() {
             </Text>
           </View>
 
-          {isCurrentSong && playback.isPlaying && (
+          {isCurrentSong && (
             <View style={styles.nowPlayingIndicator}>
               <Animated.View 
                 style={[
@@ -271,10 +306,10 @@ export default function PlayerScreen() {
       <View style={styles.playerControls}>
         <View style={styles.songDetails}>
           <Text style={[styles.songTitle, { color: colors.text }]}>
-            {playback.currentSong.title}
+            {currentSong.title}
           </Text>
           <Text style={[styles.songArtist, { color: colors.textSecondary }]}>
-            {playback.currentSong.artist}
+            {currentSong.artist}
           </Text>
         </View>
 
@@ -282,7 +317,7 @@ export default function PlayerScreen() {
           <Slider
             style={styles.progressBar}
             minimumValue={0}
-            maximumValue={playback.currentSong.duration}
+            maximumValue={currentSong.duration}
             value={position}
             onValueChange={handleSliderChange}
             minimumTrackTintColor={colors.primary}
@@ -294,7 +329,7 @@ export default function PlayerScreen() {
               {formatDuration(Math.floor(position))}
             </Text>
             <Text style={[styles.timeText, { color: colors.textSecondary }]}>
-              {formatDuration(playback.currentSong.duration)}
+              {formatDuration(currentSong.duration)}
             </Text>
           </View>
         </View>
