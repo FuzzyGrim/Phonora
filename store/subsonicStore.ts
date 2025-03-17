@@ -102,7 +102,7 @@ export const useSubsonicStore = create<SubsonicState>((set, get) => ({
     try {
       const params = get().generateAuthParams();
       const response = await fetch(
-        `${config.serverUrl}/rest/getRandomSongs.view?size=50&${params.toString()}`
+        `${config.serverUrl}/rest/getRandomSongs.view?size=100&${params.toString()}`
       );
       const data = await response.json();
 
