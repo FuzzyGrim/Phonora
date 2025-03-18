@@ -1,6 +1,13 @@
+import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import md5 from "md5";
 import { Audio } from "expo-av";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FileSystem from "expo-file-system";
+
+// Define cache directories
+const AUDIO_DIRECTORY = FileSystem.cacheDirectory + "audio/";
+const IMAGE_DIRECTORY = FileSystem.cacheDirectory + "image/";
 
 export interface Song {
   id: string;
@@ -24,10 +31,17 @@ interface PlaybackState {
   sound: Audio.Sound | null;
 }
 
+interface UserSettings {
+  offlineMode: boolean;
+  maxAudioCacheSize: number;
+  maxImageCacheSize: number;
+}
+
 interface SubsonicState {
   config: SubsonicConfig | null;
   isAuthenticated: boolean;
   songs: Song[];
+  userSettings: UserSettings;
   isLoading: boolean;
   error: string | null;
   playback: PlaybackState;
@@ -47,27 +61,119 @@ interface SubsonicState {
   seekForward: () => Promise<void>;
   seekBackward: () => Promise<void>;
   setPlaybackRate: (speed: number) => Promise<void>;
+
+  clearCache: (type?: "audio" | "image") => Promise<void>;
+  initializeStore: () => Promise<void>;
+  setUserSettings: (settings: UserSettings) => Promise<void>;
 }
+
+const DEFAULT_USER_SETTINGS: UserSettings = {
+  offlineMode: false,
+  maxAudioCacheSize: 5,
+  maxImageCacheSize: 5,
+};
 
 export const useSubsonicStore = create<SubsonicState>((set, get) => ({
   config: null,
   isAuthenticated: false,
   songs: [],
+  userSettings: DEFAULT_USER_SETTINGS,
   isLoading: false,
   error: null,
-
   playback: {
     isPlaying: false,
     currentSong: null,
     sound: null,
   },
 
-  setConfig: (config) => {
-    set({ config, isAuthenticated: true });
-    get().fetchSongs();
+  initializeStore: async () => {
+    try {
+      // Load credentials
+      const credentials = await SecureStore.getItemAsync(
+        "subsonic_credentials",
+      );
+      if (credentials) {
+        const config = JSON.parse(credentials);
+        set({ config, isAuthenticated: true });
+      }
+
+      // Load settings
+      const settings = await AsyncStorage.getItem("user_settings");
+      if (settings) {
+        set({ userSettings: JSON.parse(settings) });
+      }
+
+      // If authenticated, fetch songs
+      if (get().isAuthenticated) {
+        get().fetchSongs();
+      }
+    } catch (error) {
+      console.error("Error initializing store:", error);
+    }
   },
 
-  clearConfig: () => set({ config: null, isAuthenticated: false, songs: [] }),
+  // Update setConfig to save credentials
+  setConfig: async (config) => {
+    try {
+      await SecureStore.setItemAsync(
+        "subsonic_credentials",
+        JSON.stringify(config),
+      );
+      set({ config, isAuthenticated: true });
+      get().fetchSongs();
+    } catch (error) {
+      console.error("Error saving credentials:", error);
+    }
+  },
+
+  // Update clearConfig to delete credentials
+  clearConfig: async () => {
+    try {
+      await SecureStore.deleteItemAsync("subsonic_credentials");
+      set({ config: null, isAuthenticated: false, songs: [] });
+    } catch (error) {
+      console.error("Error clearing credentials:", error);
+    }
+  },
+
+  setUserSettings: async (settings) => {
+    try {
+      await AsyncStorage.setItem("user_settings", JSON.stringify(settings));
+      set({ userSettings: settings });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    }
+  },
+
+  clearCache: async (type?: "audio" | "image") => {
+    try {
+      // Create directories if they don't exist to avoid errors
+      if (!type || type === "audio") {
+        const musicDirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
+        if (musicDirInfo.exists) {
+          await FileSystem.deleteAsync(AUDIO_DIRECTORY);
+        }
+        await FileSystem.makeDirectoryAsync(AUDIO_DIRECTORY, {
+          intermediates: true,
+        });
+      }
+
+      if (!type || type === "image") {
+        const coverDirInfo = await FileSystem.getInfoAsync(IMAGE_DIRECTORY);
+        if (coverDirInfo.exists) {
+          await FileSystem.deleteAsync(IMAGE_DIRECTORY);
+        }
+        await FileSystem.makeDirectoryAsync(IMAGE_DIRECTORY, {
+          intermediates: true,
+        });
+      }
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      return Promise.reject(error);
+    }
+  },
 
   generateAuthParams: () => {
     const { config } = get();

@@ -7,8 +7,16 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { useEffect } from "react";
+import { useSubsonicStore } from "@/store/subsonicStore";
 
 export default function RootLayout() {
+  const { initializeStore } = useSubsonicStore();
+
+  useEffect(() => {
+    initializeStore();
+  }, [initializeStore]);
+
   const [fontsLoaded] = useFonts({
     "Inter-Regular": Inter_400Regular,
     "Inter-SemiBold": Inter_600SemiBold,
