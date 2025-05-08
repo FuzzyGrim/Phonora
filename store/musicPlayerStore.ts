@@ -52,7 +52,7 @@ interface UserSettings {
 /**
  * Complete state and actions for the Subsonic store
  */
-interface SubsonicState {
+interface MusicPlayerState {
   // State
   config: SubsonicConfig | null;
   isAuthenticated: boolean;
@@ -107,7 +107,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
  * Main Zustand store for Subsonic functionality
  * Handles authentication, playback, caching, and settings
  */
-export const useSubsonicStore = create<SubsonicState>((set, get) => ({
+export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   // Initial state
   config: null,
   isAuthenticated: false,

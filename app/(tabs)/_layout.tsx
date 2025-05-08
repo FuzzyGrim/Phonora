@@ -4,12 +4,12 @@ import { useTheme } from "@/context/ThemeContext";
 import { Home, Search, Library, Settings } from "lucide-react-native";
 import MiniPlayer from "@/components/MiniPlayer";
 import { View, StyleSheet } from "react-native";
-import { useSubsonicStore } from "@/store/subsonicStore";
+import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const { playback } = useSubsonicStore();
+  const { playback } = useMusicPlayerStore();
   const showMiniPlayer = playback.currentSong !== null;
 
   return (

@@ -8,10 +8,10 @@ import {
 } from "@expo-google-fonts/inter";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useEffect } from "react";
-import { useSubsonicStore } from "@/store/subsonicStore";
+import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 
 export default function RootLayout() {
-  const { initializeStore } = useSubsonicStore();
+  const { initializeStore } = useMusicPlayerStore();
 
   useEffect(() => {
     initializeStore();

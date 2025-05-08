@@ -9,7 +9,7 @@ import {
   Animated,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useSubsonicStore, Song } from "@/store/subsonicStore";
+import { useMusicPlayerStore, Song } from "@/store/musicPlayerStore";
 import {
   Play,
   Pause,
@@ -46,7 +46,7 @@ export default function PlayerScreen() {
     setPlaybackRate,
     playSong,
     seekToPosition,
-  } = useSubsonicStore();
+  } = useMusicPlayerStore();
   const router = useRouter();
   const [isRepeat, setIsRepeat] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);

@@ -1,17 +1,17 @@
+import { useTheme } from "@/context/ThemeContext";
+import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { Music2, Pause, Play } from "lucide-react-native";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
   ActivityIndicator,
+  Image,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useTheme } from "@/context/ThemeContext";
-import { useSubsonicStore } from "@/store/subsonicStore";
-import { Play, Pause, Music2 } from "lucide-react-native";
 
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -31,7 +31,7 @@ export default function HomeScreen() {
     pauseSong,
     resumeSong,
     playback,
-  } = useSubsonicStore();
+  } = useMusicPlayerStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = React.useCallback(async () => {
@@ -173,7 +173,7 @@ export default function HomeScreen() {
                   onPress={() => handlePlayPress(song)}
                 >
                   {playback.currentSong?.id === song.id &&
-                  playback.isPlaying ? (
+                    playback.isPlaying ? (
                     <Pause size={16} color={colors.text} />
                   ) : (
                     <Play size={16} color={colors.text} />

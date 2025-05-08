@@ -1,14 +1,14 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useSubsonicStore } from "@/store/subsonicStore";
+import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import { Play, Pause, SkipForward, Music2 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
 export default function MiniPlayer() {
   const { colors } = useTheme();
   const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl } =
-    useSubsonicStore();
+    useMusicPlayerStore();
   const router = useRouter();
 
   if (!playback.currentSong) return null;

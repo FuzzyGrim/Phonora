@@ -11,7 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useSubsonicStore } from "@/store/subsonicStore";
+import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import {
   CircleCheck as CheckCircle2,
   Circle as XCircle,
@@ -29,7 +29,7 @@ const IMAGE_DIRECTORY = FileSystem.cacheDirectory + "image/";
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const { config, setConfig, userSettings, setUserSettings, clearCache } =
-    useSubsonicStore();
+    useMusicPlayerStore();
   const [serverUrl, setServerUrl] = useState(config?.serverUrl || "");
   const [username, setUsername] = useState(config?.username || "");
   const [password, setPassword] = useState(config?.password || "");
