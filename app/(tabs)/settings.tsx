@@ -22,9 +22,8 @@ import {
 import md5 from "md5";
 import * as FileSystem from "expo-file-system";
 
-// Define cache directories
-const AUDIO_DIRECTORY = FileSystem.cacheDirectory + "audio/";
-const IMAGE_DIRECTORY = FileSystem.cacheDirectory + "image/";
+// Define cache directory
+const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
@@ -36,16 +35,11 @@ export default function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [audioCacheSize, setAudioCacheSize] = useState<number | null>(null);
-  const [imageCacheSize, setImageCacheSize] = useState<number | null>(null);
+  const [cacheSize, setCacheSize] = useState<number | null>(null);
   const [isCalculatingCache, setIsCalculatingCache] = useState(false);
   const [offlineMode, setOfflineMode] = useState(userSettings.offlineMode);
-  const [maxAudioCacheSize, setMaxAudioCacheSize] = useState<number>(
-    userSettings.maxAudioCacheSize || 5,
-  );
-
-  const [maxImageCacheSize, setMaxImageCacheSize] = useState<number>(
-    userSettings.maxImageCacheSize || 5,
+  const [maxCacheSize, setMaxCacheSize] = useState<number>(
+    userSettings.maxCacheSize || 10,
   );
 
   // Calculate cache size on component mount
@@ -59,8 +53,7 @@ export default function SettingsScreen() {
       try {
         await setUserSettings({
           offlineMode,
-          maxAudioCacheSize,
-          maxImageCacheSize,
+          maxCacheSize,
         });
       } catch (error) {
         console.error("Failed to save settings:", error);
@@ -68,7 +61,7 @@ export default function SettingsScreen() {
     };
 
     saveSettings();
-  }, [offlineMode, maxAudioCacheSize, maxImageCacheSize, setUserSettings]);
+  }, [offlineMode, maxCacheSize, setUserSettings]);
 
   const validateInputs = () => {
     if (!serverUrl.trim()) {
@@ -159,61 +152,36 @@ export default function SettingsScreen() {
   const calculateCacheSize = async () => {
     setIsCalculatingCache(true);
     try {
-      // Check if directories exist
-      const audioDirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
-      const imageDirInfo = await FileSystem.getInfoAsync(IMAGE_DIRECTORY);
+      // Check if directory exists
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
 
-      let audioSize = 0;
-      let imageSize = 0;
+      let totalSize = 0;
 
-      if (audioDirInfo.exists) {
-        const audioFiles = await FileSystem.readDirectoryAsync(AUDIO_DIRECTORY);
-        for (const file of audioFiles) {
+      if (cacheInfo.exists) {
+        const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
+        for (const file of files) {
           const fileInfo = await FileSystem.getInfoAsync(
-            `${AUDIO_DIRECTORY}${file}`,
+            `${CACHE_DIRECTORY}${file}`
           );
           if (fileInfo.exists && fileInfo.size) {
-            audioSize += fileInfo.size;
-          }
-        }
-      }
-
-      if (imageDirInfo.exists) {
-        const imageFiles = await FileSystem.readDirectoryAsync(IMAGE_DIRECTORY);
-        for (const file of imageFiles) {
-          const fileInfo = await FileSystem.getInfoAsync(
-            `${IMAGE_DIRECTORY}${file}`,
-          );
-          if (fileInfo.exists && fileInfo.size) {
-            imageSize += fileInfo.size;
+            totalSize += fileInfo.size;
           }
         }
       }
 
       // Convert to MB
-      const audioSizeMB = audioSize / (1024 * 1024);
-      const imageSizeMB = imageSize / (1024 * 1024);
-
-      setAudioCacheSize(audioSizeMB);
-      setImageCacheSize(imageSizeMB);
+      const totalSizeMB = totalSize / (1024 * 1024);
+      setCacheSize(totalSizeMB);
     } catch (error) {
       console.error("Error calculating cache size:", error);
-      setAudioCacheSize(null);
-      setImageCacheSize(null);
+      setCacheSize(null);
     } finally {
       setIsCalculatingCache(false);
     }
   };
 
-  const handleClearCache = async (type?: "audio" | "image") => {
-    const typeText =
-      type === "audio"
-        ? "cached audio"
-        : type === "image"
-          ? "cached image"
-          : "all cached audio and image";
-
-    Alert.alert("Clear Cache", `Are you sure you want to clear ${typeText}?`, [
+  const handleClearCache = async () => {
+    Alert.alert("Clear Cache", "Are you sure you want to clear all cached files?", [
       {
         text: "Cancel",
         style: "cancel",
@@ -224,17 +192,16 @@ export default function SettingsScreen() {
         onPress: async () => {
           setIsCalculatingCache(true);
           try {
-            await clearCache(type);
-            if (!type || type === "audio") setAudioCacheSize(0);
-            if (!type || type === "image") setImageCacheSize(0);
+            await clearCache();
+            setCacheSize(0);
             Alert.alert(
               "Success",
-              `${typeText.charAt(0).toUpperCase() + typeText.slice(1)} cleared successfully`,
+              "Cache cleared successfully"
             );
           } catch (error) {
             Alert.alert(
               "Error",
-              `Failed to clear ${typeText}, error: ${error}`,
+              `Failed to clear cache, error: ${error}`
             );
           } finally {
             setIsCalculatingCache(false);
@@ -244,20 +211,12 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const incrementCacheSize = (type: "audio" | "image") => {
-    if (type === "audio") {
-      setMaxAudioCacheSize(maxAudioCacheSize + 0.5);
-    } else {
-      setMaxImageCacheSize(maxImageCacheSize + 0.5);
-    }
+  const incrementCacheSize = () => {
+    setMaxCacheSize(maxCacheSize + 1);
   };
 
-  const decrementCacheSize = (type: "audio" | "image") => {
-    if (type === "audio") {
-      setMaxAudioCacheSize(Math.max(0.5, maxAudioCacheSize - 0.5));
-    } else {
-      setMaxImageCacheSize(Math.max(0.5, maxImageCacheSize - 0.5));
-    }
+  const decrementCacheSize = () => {
+    setMaxCacheSize(Math.max(1, maxCacheSize - 1));
   };
 
   return (
@@ -412,19 +371,19 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Audio Cache Section */}
+        {/* Unified Cache Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Audio Cache
+            Cache Management
           </Text>
 
-          {/* Audio Cache Info */}
+          {/* Cache Info */}
           <View style={[styles.cacheInfoContainer]}>
             <Text style={[styles.cacheInfoText, { color: colors.text }]}>
               {isCalculatingCache
-                ? "Calculating audio cache size..."
-                : audioCacheSize !== null
-                  ? `Space usage: ${audioCacheSize.toFixed(2)} MB`
+                ? "Calculating cache size..."
+                : cacheSize !== null
+                  ? `Space usage: ${cacheSize.toFixed(2)} MB`
                   : "Space usage unavailable"}
             </Text>
             <TouchableOpacity
@@ -432,17 +391,17 @@ export default function SettingsScreen() {
                 styles.smallClearButton,
                 { backgroundColor: colors.error },
               ]}
-              onPress={() => handleClearCache("audio")}
+              onPress={handleClearCache}
               disabled={isCalculatingCache}
             >
               <Trash2 color={colors.text} size={14} />
             </TouchableOpacity>
           </View>
 
-          {/* Audio Cache Size Control */}
+          {/* Cache Size Control */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Max Audio Cache Size (GB)
+              Max Cache Size (GB)
             </Text>
             <View style={styles.stepper}>
               <TouchableOpacity
@@ -450,7 +409,7 @@ export default function SettingsScreen() {
                   styles.stepperButton,
                   { backgroundColor: colors.surface },
                 ]}
-                onPress={() => decrementCacheSize("audio")}
+                onPress={decrementCacheSize}
               >
                 <MinusCircle color={colors.textSecondary} size={20} />
               </TouchableOpacity>
@@ -463,14 +422,14 @@ export default function SettingsScreen() {
                     borderColor: colors.border,
                   },
                 ]}
-                value={maxAudioCacheSize.toString()}
+                value={maxCacheSize.toString()}
                 onChangeText={(text) => {
                   const numValue = parseFloat(text);
                   if (!isNaN(numValue) && numValue >= 0) {
-                    setMaxAudioCacheSize(numValue);
+                    setMaxCacheSize(numValue);
                   }
                 }}
-                placeholder="5"
+                placeholder="10"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
               />
@@ -479,91 +438,13 @@ export default function SettingsScreen() {
                   styles.stepperButton,
                   { backgroundColor: colors.surface },
                 ]}
-                onPress={() => incrementCacheSize("audio")}
+                onPress={incrementCacheSize}
               >
                 <PlusCircle color={colors.textSecondary} size={20} />
               </TouchableOpacity>
             </View>
             <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-              Maximum storage space for cached audio files (in GB)
-            </Text>
-          </View>
-        </View>
-
-        {/* Image Cache Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Image Cache
-          </Text>
-
-          {/* Image Cache Info */}
-          <View style={[styles.cacheInfoContainer]}>
-            <Text style={[styles.cacheInfoText, { color: colors.text }]}>
-              {isCalculatingCache
-                ? "Calculating image cache size..."
-                : imageCacheSize !== null
-                  ? `Space usage: ${imageCacheSize.toFixed(2)} MB`
-                  : "Space usage unavailable"}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.smallClearButton,
-                { backgroundColor: colors.error },
-              ]}
-              onPress={() => handleClearCache("image")}
-              disabled={isCalculatingCache}
-            >
-              <Trash2 color={colors.text} size={14} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Image Cache Size Control */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Max Image Cache Size (GB)
-            </Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={[
-                  styles.stepperButton,
-                  { backgroundColor: colors.surface },
-                ]}
-                onPress={() => decrementCacheSize("image")}
-              >
-                <MinusCircle color={colors.textSecondary} size={20} />
-              </TouchableOpacity>
-              <TextInput
-                style={[
-                  styles.stepperInput,
-                  {
-                    backgroundColor: colors.surface,
-                    color: colors.text,
-                    borderColor: colors.border,
-                  },
-                ]}
-                value={maxImageCacheSize.toString()}
-                onChangeText={(text) => {
-                  const numValue = parseFloat(text);
-                  if (!isNaN(numValue) && numValue >= 0) {
-                    setMaxImageCacheSize(numValue);
-                  }
-                }}
-                placeholder="5"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
-              />
-              <TouchableOpacity
-                style={[
-                  styles.stepperButton,
-                  { backgroundColor: colors.surface },
-                ]}
-                onPress={() => incrementCacheSize("image")}
-              >
-                <PlusCircle color={colors.textSecondary} size={20} />
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-              Maximum storage space for cached images (in GB)
+              Maximum storage space for all cached files (songs and images) in GB
             </Text>
           </View>
         </View>

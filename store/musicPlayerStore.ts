@@ -5,9 +5,8 @@ import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 
-// Define cache directories for storing audio files and images
-const AUDIO_DIRECTORY = FileSystem.cacheDirectory + "audio/";
-const IMAGE_DIRECTORY = FileSystem.cacheDirectory + "image/";
+// Define a single cache directory for all files
+const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
 
 /**
  * Represents a song in the Subsonic API
@@ -45,8 +44,7 @@ interface PlaybackState {
  */
 interface UserSettings {
   offlineMode: boolean;
-  maxAudioCacheSize: number; // in GB
-  maxImageCacheSize: number; // in GB
+  maxCacheSize: number; // in GB
 }
 
 /**
@@ -87,7 +85,11 @@ interface MusicPlayerState {
   setPlaybackRate: (speed: number) => Promise<void>;
 
   // Cache management
-  clearCache: (type?: "audio" | "image") => Promise<void>;
+  clearCache: () => Promise<void>;
+  isFileCached: (fileId: string, extension: string) => Promise<boolean>;
+  getCachedFilePath: (fileId: string, extension: string) => string;
+  downloadSong: (song: Song) => Promise<string>;
+  downloadImage: (imageId: string) => Promise<string>;
 
   // Initialization
   initializeStore: () => Promise<void>;
@@ -99,8 +101,7 @@ interface MusicPlayerState {
 // Default settings when no user preferences are saved
 const DEFAULT_USER_SETTINGS: UserSettings = {
   offlineMode: false,
-  maxAudioCacheSize: 5, // 5 GB
-  maxImageCacheSize: 5, // 5 GB
+  maxCacheSize: 10, // 10 GB
 };
 
 /**
@@ -194,40 +195,134 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   },
 
   /**
-   * Clear cached files to free up storage space
-   * Can clear audio files, images, or both
+   * Clear all cached files to free up storage space
    */
-  clearCache: async (type?: "audio" | "image") => {
+  clearCache: async () => {
     try {
-      // Clear audio cache if requested or if no specific type
-      if (!type || type === "audio") {
-        const musicDirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
-        if (musicDirInfo.exists) {
-          await FileSystem.deleteAsync(AUDIO_DIRECTORY);
-        }
-        // Recreate the directory to ensure it exists for future caching
-        await FileSystem.makeDirectoryAsync(AUDIO_DIRECTORY, {
-          intermediates: true,
-        });
+      // Check if the cache directory exists
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+      if (cacheInfo.exists) {
+        await FileSystem.deleteAsync(CACHE_DIRECTORY);
       }
 
-      // Clear image cache if requested or if no specific type
-      if (!type || type === "image") {
-        const coverDirInfo = await FileSystem.getInfoAsync(IMAGE_DIRECTORY);
-        if (coverDirInfo.exists) {
-          await FileSystem.deleteAsync(IMAGE_DIRECTORY);
-        }
-        // Recreate the directory to ensure it exists for future caching
-        await FileSystem.makeDirectoryAsync(IMAGE_DIRECTORY, {
-          intermediates: true,
-        });
-      }
+      // Recreate the directory to ensure it exists for future caching
+      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+        intermediates: true,
+      });
 
       return Promise.resolve();
     } catch (error) {
       console.error("Error clearing cache:", error);
       return Promise.reject(error);
     }
+  },
+
+  /**
+   * Check if a file is already cached
+   */
+  isFileCached: async (fileId: string, extension: string) => {
+    const filePath = get().getCachedFilePath(fileId, extension);
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    return fileInfo.exists;
+  },
+
+  /**
+   * Get the local path for a cached file
+   */
+  getCachedFilePath: (fileId: string, extension: string) => {
+    return CACHE_DIRECTORY + fileId + "." + extension;
+  },
+
+  /**
+   * Download and cache a song for offline playback
+   */
+  downloadSong: async (song: Song) => {
+    const { userSettings } = get();
+
+    // If already cached, return the cached path
+    if (await get().isFileCached(song.id, "mp3")) {
+      return get().getCachedFilePath(song.id, "mp3");
+    }
+
+    // Ensure directory exists
+    const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+    }
+
+    // Get the stream URL and download the song
+    const streamUrl = get().getStreamUrl(song.id);
+    const filePath = get().getCachedFilePath(song.id, "mp3");
+
+    // Check if caching is enabled
+    if (userSettings.offlineMode || userSettings.maxCacheSize > 0) {
+      try {
+        // Download the file
+        const downloadResult = await FileSystem.downloadAsync(
+          streamUrl,
+          filePath
+        );
+
+        if (downloadResult.status === 200) {
+          console.log(`Song ${song.title} cached successfully`);
+          return filePath;
+        } else {
+          throw new Error(`HTTP Error: ${downloadResult.status}`);
+        }
+      } catch (error) {
+        console.error(`Failed to cache song ${song.title}:`, error);
+        throw error;
+      }
+    }
+
+    // If offline mode is disabled or cache size is 0, don't cache
+    return streamUrl;
+  },
+
+  /**
+   * Download and cache an image for offline viewing
+   */
+  downloadImage: async (imageId: string) => {
+    const { userSettings } = get();
+
+    // If already cached, return the cached path
+    if (await get().isFileCached(imageId, "jpg")) {
+      return get().getCachedFilePath(imageId, "jpg");
+    }
+
+    // Ensure directory exists
+    const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+    }
+
+    // Get the cover art URL and download the image
+    const imageUrl = get().getCoverArtUrl(imageId);
+    const filePath = get().getCachedFilePath(imageId, "jpg");
+
+    // Check if caching is enabled
+    if (userSettings.offlineMode || userSettings.maxCacheSize > 0) {
+      try {
+        // Download the file
+        const downloadResult = await FileSystem.downloadAsync(
+          imageUrl,
+          filePath
+        );
+
+        if (downloadResult.status === 200) {
+          console.log(`Image ${imageId} cached successfully`);
+          return filePath;
+        } else {
+          throw new Error(`HTTP Error: ${downloadResult.status}`);
+        }
+      } catch (error) {
+        console.error(`Failed to cache image ${imageId}:`, error);
+        throw error;
+      }
+    }
+
+    // If offline mode is disabled or cache size is 0, don't cache
+    return imageUrl;
   },
 
   /**
@@ -320,6 +415,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   /**
    * Play a song by creating a new Audio.Sound instance
    * Unloads any currently playing audio first
+   * Downloads and caches the song if not already cached
    */
   playSong: async (song: Song) => {
     try {
@@ -329,10 +425,75 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         await currentSound.unloadAsync();
       }
 
-      // Create a new sound object with the stream URL
-      const streamUrl = get().getStreamUrl(song.id);
+      // Update state to show we're loading
+      set(state => ({
+        playback: {
+          ...state.playback,
+          isPlaying: false,
+          currentSong: song
+        }
+      }));
+
+      // Get audio source - either cached or streamed
+      let audioSource;
+      const { userSettings } = get();
+
+      // Check if the song is cached
+      const isCached = await get().isFileCached(song.id, "mp3");
+      
+      // Handle offline mode restriction
+      if (userSettings.offlineMode && !isCached) {
+        throw new Error("Cannot play song in offline mode: Song not cached");
+      }
+
+      // Cache handling section
+      if (userSettings.maxCacheSize > 0) {
+        // Start a promise to handle the audio caching
+        const audioCachePromise = isCached 
+          ? Promise.resolve(get().getCachedFilePath(song.id, "mp3")) 
+          : get().downloadSong(song).catch(err => {
+              console.warn(`Background audio caching failed for ${song.title}:`, err);
+              return get().getStreamUrl(song.id);
+            });
+        
+        // If the song has cover art, cache it also
+        let imageCachePromise = Promise.resolve();
+        if (song.coverArt) {
+          const isImageCached = await get().isFileCached(song.coverArt, "jpg");
+          if (!isImageCached) {
+            // Download image in the background, don't await
+            imageCachePromise = get().downloadImage(song.coverArt).then(() => {})
+              .catch(err => console.warn(`Background image caching failed for ${song.coverArt}:`, err));
+          }
+        }
+
+        // Start both downloads in parallel but don't wait for image
+        if (isCached) {
+          // Use cached audio immediately
+          const cachedPath = get().getCachedFilePath(song.id, "mp3");
+          audioSource = { uri: cachedPath };
+          console.log(`Playing cached song: ${song.title}`);
+          
+          // Let image download in background
+          imageCachePromise.catch(() => {});
+        } else {
+          // Use streaming URL while waiting for download
+          const streamUrl = get().getStreamUrl(song.id);
+          audioSource = { uri: streamUrl };
+          
+          // Let both downloads happen in background
+          Promise.all([audioCachePromise, imageCachePromise])
+            .catch(() => {}) // Ignore errors to prevent app crashes
+            .finally(() => console.log(`Background caching operations completed for ${song.title}`));
+        }
+      } else {
+        // Caching is disabled, use streaming URL
+        audioSource = { uri: get().getStreamUrl(song.id) };
+      }
+
+      // Create a new sound object
       const { sound } = await Audio.Sound.createAsync(
-        { uri: streamUrl },
+        audioSource,
         { shouldPlay: true },
       );
 
@@ -352,6 +513,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       });
     } catch (error) {
       console.error("Error playing song:", error);
+      // Reset playback state on error
+      set(state => ({
+        playback: {
+          ...state.playback,
+          isPlaying: false,
+        },
+        error: error instanceof Error ? error.message : "Failed to play song"
+      }));
     }
   },
 
