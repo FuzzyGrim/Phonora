@@ -12,6 +12,7 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import { Search as SearchIcon, Music, User, Disc, Play } from "lucide-react-native";
+import { router } from "expo-router";
 import { Song, Artist, Album } from "@/store/musicPlayerStore";
 
 // Type for items in our FlatList
@@ -66,13 +67,17 @@ export default function SearchScreen() {
   };
 
   const navigateToAlbum = (albumId: string) => {
-    // Future implementation
-    console.log(`Navigate to album: ${albumId}`);
+    router.push({
+      pathname: "/album-details",
+      params: { id: albumId }
+    });
   };
 
   const navigateToArtist = (artistId: string) => {
-    // Future implementation
-    console.log(`Navigate to artist: ${artistId}`);
+    router.push({
+      pathname: "/artist-details",
+      params: { id: artistId }
+    });
   };
 
   // Prepare data for FlatList
