@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { Search as SearchIcon, Music, User, Disc, Play } from "lucide-react-native";
+import { Search as SearchIcon, Music, User, Disc, Play, Pause } from "lucide-react-native";
 import { router } from "expo-router";
 import { Song, Artist, Album } from "@/store/musicPlayerStore";
 
@@ -29,7 +29,10 @@ export default function SearchScreen() {
     searchResults,
     isSearching,
     getCoverArtUrl,
-    playSong
+    playSong,
+    playback,
+    pauseSong,
+    resumeSong
   } = useMusicPlayerStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -63,7 +66,18 @@ export default function SearchScreen() {
   }, [searchQuery, search]);
 
   const handlePlaySong = (song: Song) => {
-    playSong(song);
+    // If the song is already playing, pause it
+    if (playback.currentSong && playback.currentSong.id === song.id && playback.isPlaying) {
+      pauseSong();
+    }
+    // If the song is paused, resume it
+    else if (playback.currentSong && playback.currentSong.id === song.id && !playback.isPlaying) {
+      resumeSong();
+    }
+    // Otherwise play the new song
+    else {
+      playSong(song);
+    }
   };
 
   const navigateToAlbum = (albumId: string) => {
@@ -190,7 +204,11 @@ export default function SearchScreen() {
             </Text>
           </View>
           <TouchableOpacity style={styles.playButton} onPress={() => handlePlaySong(item.data)}>
-            <Play size={18} color={colors.text} />
+            {playback.currentSong && playback.currentSong.id === item.data.id && playback.isPlaying ? (
+              <Pause size={18} color={colors.text} />
+            ) : (
+              <Play size={18} color={colors.text} />
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       );
