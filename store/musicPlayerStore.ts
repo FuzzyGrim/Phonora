@@ -21,6 +21,35 @@ export interface Song {
 }
 
 /**
+ * Represents an artist in the Subsonic API
+ */
+export interface Artist {
+  id: string;
+  name: string;
+}
+
+/**
+ * Represents an album in the Subsonic API
+ */
+export interface Album {
+  id: string;
+  name: string;
+  artist: string;
+  artistId: string;
+  coverArt?: string;
+  songCount: number;
+}
+
+/**
+ * Search results object
+ */
+export interface SearchResults {
+  artists: Artist[];
+  albums: Album[];
+  songs: Song[];
+}
+
+/**
  * Configuration for connecting to a Subsonic server
  */
 interface SubsonicConfig {
@@ -59,6 +88,8 @@ interface MusicPlayerState {
   isLoading: boolean;
   error: string | null;
   playback: PlaybackState;
+  searchResults: SearchResults | null;
+  isSearching: boolean;
 
   // Authentication actions
   setConfig: (config: SubsonicConfig) => void;
@@ -67,6 +98,7 @@ interface MusicPlayerState {
 
   // Data fetching
   fetchSongs: () => Promise<void>;
+  search: (query: string) => Promise<void>;
 
   // URL generation
   getCoverArtUrl: (id: string) => string;
@@ -115,7 +147,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   songs: [],
   userSettings: DEFAULT_USER_SETTINGS,
   isLoading: false,
+  isSearching: false,
   error: null,
+  searchResults: null,
   playback: {
     isPlaying: false,
     currentSong: null,
@@ -408,6 +442,70 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : "Failed to fetch songs",
         isLoading: false,
+      });
+    }
+  },
+
+  /**
+   * Search for songs, albums, and artists
+   */
+  search: async (query: string) => {
+    const { config } = get();
+    if (!config || !query.trim()) {
+      set({ searchResults: null, isSearching: false });
+      return;
+    }
+
+    set({ isSearching: true, error: null });
+
+    try {
+      const params = get().generateAuthParams();
+      const response = await fetch(
+        `${config.serverUrl}/rest/search3.view?query=${encodeURIComponent(query)}&artistCount=20&albumCount=20&songCount=50&${params.toString()}`,
+      );
+      const data = await response.json();
+
+      if (data["subsonic-response"].status === "ok") {
+        const searchData = data["subsonic-response"].searchResult3;
+        
+        // Create empty arrays if any part of the response is missing
+        const artists = searchData.artist ? searchData.artist.map((artist: any) => ({
+          id: artist.id,
+          name: artist.name,
+        })) : [];
+        
+        const albums = searchData.album ? searchData.album.map((album: any) => ({
+          id: album.id,
+          name: album.name,
+          artist: album.artist,
+          artistId: album.artistId,
+          coverArt: album.coverArt,
+          songCount: album.songCount || 0,
+        })) : [];
+        
+        const songs = searchData.song ? searchData.song.map((song: any) => ({
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          duration: song.duration,
+          coverArt: song.coverArt,
+        })) : [];
+
+        set({
+          searchResults: { artists, albums, songs },
+          isSearching: false
+        });
+      } else {
+        throw new Error(
+          data["subsonic-response"].error?.message || "Search failed"
+        );
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      set({
+        error: error instanceof Error ? error.message : "Search failed",
+        isSearching: false
       });
     }
   },
