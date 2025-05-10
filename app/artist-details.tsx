@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { ChevronLeft, User, Disc } from "lucide-react-native";
+import { ChevronLeft, User, Disc, Play } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
 
 // Album interface for artist's album listing
@@ -20,6 +20,16 @@ interface ArtistAlbum {
     coverArt?: string;
     songCount: number;
     year?: number;
+}
+
+// Song interface for this component
+interface Song {
+    id: string;
+    title: string;
+    artist: string;
+    album: string;
+    duration: number;
+    coverArt?: string;
 }
 
 // Artist interface for this component
@@ -32,12 +42,14 @@ interface ArtistDetails {
 
 export default function ArtistDetailsScreen() {
     const { colors } = useTheme();
-    const { config, generateAuthParams, getCoverArtUrl } = useMusicPlayerStore();
+    const { config, generateAuthParams, getCoverArtUrl, playSong } = useMusicPlayerStore();
     const params = useLocalSearchParams();
     const artistId = params.id as string;
 
     const [artist, setArtist] = useState<ArtistDetails | null>(null);
+    const [allSongs, setAllSongs] = useState<Song[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingSongs, setIsLoadingSongs] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -87,6 +99,44 @@ export default function ArtistDetailsScreen() {
                         albumCount: artist.albumCount,
                         albums: formattedAlbums,
                     });
+
+                    // Now fetch songs for all albums
+                    if (formattedAlbums.length > 0) {
+                        setIsLoadingSongs(true);
+                        const allSongs: Song[] = [];
+
+                        for (const album of formattedAlbums) {
+                            try {
+                                const albumResponse = await fetch(
+                                    `${config.serverUrl}/rest/getAlbum.view?id=${album.id}&${authParams.toString()}`
+                                );
+
+                                const albumData = await albumResponse.json();
+
+                                if (albumData["subsonic-response"].status === "ok" &&
+                                    albumData["subsonic-response"].album &&
+                                    albumData["subsonic-response"].album.song) {
+
+                                    const albumSongs = albumData["subsonic-response"].album.song.map((song: any) => ({
+                                        id: song.id,
+                                        title: song.title,
+                                        artist: song.artist,
+                                        album: song.album,
+                                        duration: song.duration,
+                                        coverArt: song.coverArt,
+                                    }));
+
+                                    allSongs.push(...albumSongs);
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching songs for album ${album.id}:`, error);
+                                // Continue with other albums even if one fails
+                            }
+                        }
+
+                        setAllSongs(allSongs);
+                        setIsLoadingSongs(false);
+                    }
                 } else {
                     throw new Error(
                         artistData["subsonic-response"].error?.message || "Failed to fetch artist details"
@@ -108,6 +158,13 @@ export default function ArtistDetailsScreen() {
             pathname: "/album-details",
             params: { id: albumId }
         });
+    };
+
+    const playAllAlbums = () => {
+        if (allSongs.length > 0) {
+            // Play the first song, the player will continue with the rest
+            playSong(allSongs[0]);
+        }
     };
 
     if (isLoading) {
@@ -172,6 +229,23 @@ export default function ArtistDetailsScreen() {
                         <Text style={[styles.albumCount, { color: colors.textSecondary }]}>
                             {artist.albumCount || artist.albums.length} Albums
                         </Text>
+
+                        <TouchableOpacity
+                            style={[styles.playAllButton, { backgroundColor: colors.primary }]}
+                            onPress={playAllAlbums}
+                            disabled={isLoadingSongs || allSongs.length === 0}
+                        >
+                            {isLoadingSongs ? (
+                                <ActivityIndicator size="small" color={colors.background} />
+                            ) : (
+                                <>
+                                    <Play size={16} color={colors.background} />
+                                    <Text style={[styles.playAllText, { color: colors.background }]}>
+                                        Play All
+                                    </Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
                     </View>
                 }
                 renderItem={({ item }) => (
@@ -273,6 +347,20 @@ const styles = StyleSheet.create({
     albumCount: {
         fontSize: 16,
         fontFamily: "Inter-Regular",
+        marginBottom: 20,
+    },
+    playAllButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+        borderRadius: 25,
+        marginBottom: 15,
+    },
+    playAllText: {
+        marginLeft: 8,
+        fontSize: 16,
+        fontFamily: "Inter-SemiBold",
     },
     albumGrid: {
         justifyContent: "space-between",
