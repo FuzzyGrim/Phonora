@@ -30,6 +30,7 @@ export default function SearchScreen() {
     isSearching,
     getCoverArtUrl,
     playSong,
+    playSongFromSource,
     playback,
     pauseSong,
     resumeSong
@@ -76,7 +77,13 @@ export default function SearchScreen() {
     }
     // Otherwise play the new song
     else {
-      playSong(song);
+      // Get all songs from search results
+      const searchSongs = searchResults?.songs || [];
+      if (searchSongs.length > 0) {
+        playSongFromSource(song, 'search', searchSongs);
+      } else {
+        playSong(song);
+      }
     }
   };
 

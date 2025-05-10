@@ -43,7 +43,7 @@ interface ArtistDetails {
 
 export default function ArtistDetailsScreen() {
     const { colors } = useTheme();
-    const { playSong, getCoverArtUrl } = useMusicPlayerStore();
+    const { playSong, playSongFromSource, getCoverArtUrl } = useMusicPlayerStore();
     const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
         config: state.config,
         generateAuthParams: state.generateAuthParams,
@@ -159,8 +159,8 @@ export default function ArtistDetailsScreen() {
 
     const playAllAlbums = () => {
         if (allSongs.length > 0) {
-            // Play the first song, the player will continue with the rest
-            playSong(allSongs[0]);
+            // Play the first song with artist as the source
+            playSongFromSource(allSongs[0], 'artist', allSongs);
         }
     };
 

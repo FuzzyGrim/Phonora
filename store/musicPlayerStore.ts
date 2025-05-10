@@ -90,6 +90,10 @@ interface MusicPlayerState {
   playback: PlaybackState;
   searchResults: SearchResults | null;
   isSearching: boolean;
+  currentPlaylist: {
+    source: 'search' | 'library' | 'album' | 'artist';
+    songs: Song[];
+  } | null;
 
   // Authentication actions
   setConfig: (config: SubsonicConfig) => void;
@@ -106,6 +110,7 @@ interface MusicPlayerState {
 
   // Playback control
   playSong: (song: Song) => Promise<void>;
+  playSongFromSource: (song: Song, source: 'search' | 'library' | 'album' | 'artist', sourceSongs: Song[]) => Promise<void>;
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
@@ -150,6 +155,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   isSearching: false,
   error: null,
   searchResults: null,
+  currentPlaylist: null,
   playback: {
     isPlaying: false,
     currentSong: null,
@@ -623,6 +629,23 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   },
 
   /**
+   * Play a song from a specific source (search results, library, album, etc.)
+   * Sets the current playlist source for proper next/previous navigation
+   */
+  playSongFromSource: async (song: Song, source: 'search' | 'library' | 'album' | 'artist', sourceSongs: Song[]) => {
+    // Set the current playlist source
+    set({
+      currentPlaylist: {
+        source,
+        songs: sourceSongs
+      }
+    });
+    
+    // Then play the song using the regular playSong method
+    await get().playSong(song);
+  },
+
+  /**
    * Pause the currently playing song
    */
   pauseSong: async () => {
@@ -683,19 +706,19 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { songs, playback } = get();
-    if (!playback.currentSong || songs.length === 0) return;
+    const { currentPlaylist, playback } = get();
+    if (!playback.currentSong || !currentPlaylist || currentPlaylist.songs.length === 0) return;
 
     // Find the index of the current song
-    const currentIndex = songs.findIndex(
+    const currentIndex = currentPlaylist.songs.findIndex(
       (song) => song.id === playback.currentSong?.id,
     );
 
     // Return if we're at the end of the playlist or song not found
-    if (currentIndex === -1 || currentIndex === songs.length - 1) return;
+    if (currentIndex === -1 || currentIndex === currentPlaylist.songs.length - 1) return;
 
     // Play the next song
-    const nextSong = songs[currentIndex + 1];
+    const nextSong = currentPlaylist.songs[currentIndex + 1];
     await get().playSong(nextSong);
   },
 
@@ -703,11 +726,11 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Skip to the previous song in the playlist
    */
   skipToPrevious: async () => {
-    const { songs, playback } = get();
-    if (!playback.currentSong || songs.length === 0) return;
+    const { currentPlaylist, playback } = get();
+    if (!playback.currentSong || !currentPlaylist || currentPlaylist.songs.length === 0) return;
 
     // Find the index of the current song
-    const currentIndex = songs.findIndex(
+    const currentIndex = currentPlaylist.songs.findIndex(
       (song) => song.id === playback.currentSong?.id,
     );
 
@@ -715,7 +738,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     if (currentIndex === -1 || currentIndex === 0) return;
 
     // Play the previous song
-    const previousSong = songs[currentIndex - 1];
+    const previousSong = currentPlaylist.songs[currentIndex - 1];
     await get().playSong(previousSong);
   },
 

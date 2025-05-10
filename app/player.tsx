@@ -46,12 +46,16 @@ export default function PlayerScreen() {
     setPlaybackRate,
     playSong,
     seekToPosition,
+    currentPlaylist,
   } = useMusicPlayerStore();
   const router = useRouter();
   const [isRepeat, setIsRepeat] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [position, setPosition] = useState(0);
+
+  // Get the appropriate list of songs to display
+  const songsToDisplay = currentPlaylist?.songs || songs;
 
   // Define currentSong at component level
   const currentSong = playback.currentSong || {
@@ -319,7 +323,7 @@ export default function PlayerScreen() {
 
       <View style={styles.songListContainer}>
         <FlatList
-          data={songs}
+          data={songsToDisplay}
           renderItem={renderSongItem}
           keyExtractor={(item: Song) => item.id}
           showsVerticalScrollIndicator={false}

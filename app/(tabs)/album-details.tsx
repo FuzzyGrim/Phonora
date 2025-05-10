@@ -40,7 +40,7 @@ interface AlbumDetails {
 
 export default function AlbumDetailsScreen() {
     const { colors } = useTheme();
-    const { playSong, getCoverArtUrl } = useMusicPlayerStore();
+    const { playSong, playSongFromSource, getCoverArtUrl } = useMusicPlayerStore();
 
     // Access config and auth functions from the store
     const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
@@ -123,14 +123,27 @@ export default function AlbumDetailsScreen() {
     };
 
     const handlePlaySong = (song: AlbumSong) => {
-        playSong({
+        const songObject = {
             id: song.id,
             title: song.title,
             artist: song.artist,
             album: album?.name || "",
             duration: song.duration,
             coverArt: song.coverArt,
-        });
+        };
+
+        // Convert all album songs to the Song format for the playlist
+        const allSongs = album?.songs.map(s => ({
+            id: s.id,
+            title: s.title,
+            artist: s.artist,
+            album: album?.name || "",
+            duration: s.duration,
+            coverArt: s.coverArt,
+        })) || [];
+
+        // Play the song with album as the source
+        playSongFromSource(songObject, 'album', allSongs);
     };
 
     const navigateToArtist = () => {
