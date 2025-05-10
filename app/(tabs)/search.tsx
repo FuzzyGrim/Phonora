@@ -68,14 +68,14 @@ export default function SearchScreen() {
 
   const navigateToAlbum = (albumId: string) => {
     router.push({
-      pathname: "/album-details",
+      pathname: "/(tabs)/album-details",
       params: { id: albumId }
     });
   };
 
   const navigateToArtist = (artistId: string) => {
     router.push({
-      pathname: "/artist-details",
+      pathname: "/(tabs)/artist-details",
       params: { id: artistId }
     });
   };

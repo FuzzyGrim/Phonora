@@ -2,10 +2,10 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { useTheme } from "@/context/ThemeContext";
 import { Home, Search, Library, Settings } from "lucide-react-native";
-import MiniPlayer from "@/components/MiniPlayer";
 import { View, StyleSheet } from "react-native";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
+import MiniPlayer from "@/components/MiniPlayer";
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -66,6 +66,19 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Settings size={size} color={color} />
             ),
+          }}
+        />
+        {/* Hide these screens from the tab bar */}
+        <Tabs.Screen
+          name="artist-details"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
+        <Tabs.Screen
+          name="album-details"
+          options={{
+            href: null, // This prevents it from being a root tab
           }}
         />
       </Tabs>

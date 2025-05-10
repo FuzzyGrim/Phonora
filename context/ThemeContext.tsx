@@ -4,6 +4,7 @@ const colors = {
   primary: "#6366f1",
   background: "#181818",
   surface: "#282828",
+  cardBackground: "#353535",
   text: "#ffffff",
   textSecondary: "#b3b3b3",
   border: "#404040",
