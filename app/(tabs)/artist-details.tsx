@@ -58,6 +58,15 @@ export default function ArtistDetailsScreen() {
     const [artist, setArtist] = useState<ArtistDetails | null>(null);
     const [allSongs, setAllSongs] = useState<Song[]>([]);
 
+    const handleBackNavigation = () => {
+        const source = params.source as string | undefined;
+        if (source === 'search') {
+            router.push('/(tabs)/search');
+        } else {
+            router.back();
+        }
+    };
+
     useEffect(() => {
         const fetchArtistDetails = async () => {
             if (!config || !config.serverUrl) {
@@ -168,7 +177,7 @@ export default function ArtistDetailsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                         <ChevronLeft color={colors.text} size={24} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>Artist</Text>
@@ -187,7 +196,7 @@ export default function ArtistDetailsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                         <ChevronLeft color={colors.text} size={24} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>Artist</Text>
@@ -204,7 +213,7 @@ export default function ArtistDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                     <ChevronLeft color={colors.text} size={24} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Artist</Text>

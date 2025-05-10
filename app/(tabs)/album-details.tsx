@@ -55,6 +55,15 @@ export default function AlbumDetailsScreen() {
     const [error, setError] = useState<string | null>(null);
     const [album, setAlbum] = useState<AlbumDetails | null>(null);
 
+    const handleBackNavigation = () => {
+        const source = params.source as string | undefined;
+        if (source === 'search') {
+            router.push('/(tabs)/search');
+        } else {
+            router.back();
+        }
+    };
+
     useEffect(() => {
         const fetchAlbumDetails = async () => {
             if (!config || !config.serverUrl) {
@@ -148,9 +157,11 @@ export default function AlbumDetailsScreen() {
 
     const navigateToArtist = () => {
         if (album?.artistId) {
+            // Preserve the source parameter if we came from search
+            const source = params.source as string | undefined;
             router.push({
                 pathname: "/(tabs)/artist-details",
-                params: { id: album.artistId }
+                params: { id: album.artistId, source: source }
             });
         }
     };
@@ -165,7 +176,7 @@ export default function AlbumDetailsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                         <ChevronLeft color={colors.text} size={24} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>Album</Text>
@@ -181,7 +192,7 @@ export default function AlbumDetailsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                         <ChevronLeft color={colors.text} size={24} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>Album</Text>
@@ -198,7 +209,7 @@ export default function AlbumDetailsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBackNavigation}>
                     <ChevronLeft color={colors.text} size={24} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Album</Text>

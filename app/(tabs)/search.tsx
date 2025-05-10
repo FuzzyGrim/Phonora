@@ -36,7 +36,7 @@ export default function SearchScreen() {
     resumeSong
   } = useMusicPlayerStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle search when query changes
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function SearchScreen() {
       search(searchQuery);
     }, 500);
 
-    setSearchTimeout(timeout);
+    setSearchTimeout(timeout as unknown as ReturnType<typeof setTimeout>);
 
     // Cleanup
     return () => {
@@ -90,14 +90,14 @@ export default function SearchScreen() {
   const navigateToAlbum = (albumId: string) => {
     router.push({
       pathname: "/(tabs)/album-details",
-      params: { id: albumId }
+      params: { id: albumId, source: 'search' }
     });
   };
 
   const navigateToArtist = (artistId: string) => {
     router.push({
       pathname: "/(tabs)/artist-details",
-      params: { id: artistId }
+      params: { id: artistId, source: 'search' }
     });
   };
 
