@@ -18,9 +18,11 @@ import {
   Trash2,
   MinusCircle,
   PlusCircle,
+  HardDrive,
 } from "lucide-react-native";
 import md5 from "md5";
 import * as FileSystem from "expo-file-system";
+import { router } from "expo-router";
 
 // Define cache directory
 const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
@@ -447,6 +449,19 @@ export default function SettingsScreen() {
               Maximum storage space for all cached files (songs and images) in GB
             </Text>
           </View>
+
+          {/* View Cached Songs Button */}
+          <TouchableOpacity
+            style={[styles.viewCachedButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => router.push("/cached-songs")}
+          >
+            <View style={styles.buttonContent}>
+              <HardDrive color={colors.textSecondary} size={18} />
+              <Text style={[styles.viewCachedButtonText, { color: colors.text }]}>
+                View Cached Songs
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -589,5 +604,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 15,
     marginLeft: 8,
+  },
+  viewCachedButton: {
+    height: 45,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  viewCachedButtonText: {
+    fontSize: 16,
+    fontFamily: "Inter-Medium",
+    marginLeft: 10,
   },
 });
