@@ -126,7 +126,7 @@ interface MusicPlayerState {
   isFileCached: (fileId: string, extension: string) => Promise<boolean>;
   getCachedFilePath: (fileId: string, extension: string) => string;
   downloadSong: (song: Song) => Promise<string>;
-  downloadImage: (imageId: string) => Promise<string>;
+  downloadImage: (imageId: string, songTitle: string) => Promise<string>;
   getCacheSize: () => Promise<number>;
   hasEnoughCacheSpace: (sizeInBytes: number) => Promise<boolean>;
   getCachedFiles: () => Promise<Array<{ path: string; id: string; extension: string; size: number; modTime: number; filename: string }>>;
@@ -436,13 +436,13 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         );
 
         if (downloadResult.status === 200) {
-          console.log(`Song ${song.title} cached successfully`);
+          console.log(`Song cached successfully: ${song.title}`);
           return filePath;
         } else {
           throw new Error(`HTTP Error: ${downloadResult.status}`);
         }
-      } catch (error) {
-        console.error(`Failed to cache song ${song.title}:`, error);
+        } catch (error) {
+        console.error(`Failed to cache song: ${song.title}`, error);
         throw error;
       }
     }
@@ -454,13 +454,17 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   /**
    * Download and cache an image for offline viewing
    */
-  downloadImage: async (imageId: string) => {
+  downloadImage: async (imageId: string, songTitle: string) => {
     const { userSettings } = get();
 
     // If already cached, return the cached path
     if (await get().isFileCached(imageId, "jpg")) {
+      console.log(`Image already cached: ${songTitle}`);
       return get().getCachedFilePath(imageId, "jpg");
     }
+
+    // Log that we're starting to download
+    console.log(`Starting background download: ${songTitle}`);
 
     // Ensure directory exists
     const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
@@ -494,7 +498,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         );
 
         if (downloadResult.status === 200) {
-          console.log(`Image ${imageId} cached successfully`);
+          console.log(`Image cached successfully: ${songTitle}`);
           return filePath;
         } else {
           throw new Error(`HTTP Error: ${downloadResult.status}`);
@@ -713,7 +717,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           const isImageCached = await get().isFileCached(song.coverArt, "jpg");
           if (!isImageCached) {
             // Download image in the background, don't await
-            imageCachePromise = get().downloadImage(song.coverArt).then(() => {})
+            imageCachePromise = get().downloadImage(song.coverArt, song.title).then(() => {})
               .catch(err => console.warn(`Background image caching failed for ${song.coverArt}:`, err));
           }
         }
