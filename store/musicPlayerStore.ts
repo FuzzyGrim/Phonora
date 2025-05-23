@@ -667,9 +667,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   playSong: async (song: Song) => {
     try {
-      // Release current player to free up resources
+      // Stop and release current player to free up resources
       const { player: currentPlayer } = get().playback;
       if (currentPlayer) {
+        // First pause the player to immediately stop the sound
+        currentPlayer.pause();
+        // Then remove it to free up resources
         currentPlayer.remove();
       }
 
@@ -821,6 +824,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   stopSong: async () => {
     const { player } = get().playback;
     if (player) {
+      // First pause the player to immediately stop the sound
+      player.pause();
+      // Then remove it to free up resources
       player.remove();
       set({
         playback: {
