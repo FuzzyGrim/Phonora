@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import md5 from "md5";
-import { Audio } from "expo-av";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 
@@ -65,7 +65,7 @@ interface SubsonicConfig {
 interface PlaybackState {
   isPlaying: boolean;
   currentSong: Song | null;
-  sound: Audio.Sound | null;
+  player: ReturnType<typeof createAudioPlayer> | null;
 }
 
 /**
@@ -127,6 +127,10 @@ interface MusicPlayerState {
   getCachedFilePath: (fileId: string, extension: string) => string;
   downloadSong: (song: Song) => Promise<string>;
   downloadImage: (imageId: string) => Promise<string>;
+  getCacheSize: () => Promise<number>;
+  hasEnoughCacheSpace: (sizeInBytes: number) => Promise<boolean>;
+  getCachedFiles: () => Promise<Array<{ path: string; id: string; extension: string; size: number; modTime: number; filename: string }>>;
+  freeUpCacheSpace: (requiredSpace: number) => Promise<number>;
 
   // Initialization
   initializeStore: () => Promise<void>;
@@ -159,7 +163,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   playback: {
     isPlaying: false,
     currentSong: null,
-    sound: null,
+    player: null,
   },
 
   /**
@@ -258,6 +262,121 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   },
 
   /**
+   * Get the total size of the cache directory in bytes
+   */
+  getCacheSize: async () => {
+    try {
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY, { size: true });
+      if (!cacheInfo.exists) {
+        return 0;
+      }
+      return cacheInfo.size || 0;
+    } catch (error) {
+      console.error("Error getting cache size:", error);
+      return 0;
+    }
+  },
+
+  /**
+   * Check if there's enough space in the cache for a new file of the given size
+   * @param sizeInBytes Estimated size of the new file in bytes
+   * @returns True if there's enough space, false otherwise
+   */
+  hasEnoughCacheSpace: async (sizeInBytes: number) => {
+    const { userSettings } = get();
+    
+    // If cache size limit is 0, caching is disabled
+    if (userSettings.maxCacheSize <= 0) {
+      return false;
+    }
+    
+    try {
+      // Get current cache size
+      const currentCacheSize = await get().getCacheSize();
+      
+      // Convert maxCacheSize from GB to bytes (1GB = 1024^3 bytes)
+      const maxCacheSizeInBytes = userSettings.maxCacheSize * 1024 * 1024 * 1024;
+      
+      // Check if adding the new file would exceed the limit
+      return (currentCacheSize + sizeInBytes) <= maxCacheSizeInBytes;
+    } catch (error) {
+      console.error("Error checking cache space:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Get metadata for all cached files including creation time and size
+   * @returns Array of cached file info objects sorted by creation time (oldest first)
+   */
+  getCachedFiles: async () => {
+    try {
+      const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
+      
+      // Get info for each file including creation date and size
+      const fileInfoPromises = files.map(async (filename) => {
+        const filePath = CACHE_DIRECTORY + filename;
+        const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
+        
+        // Extract the file ID and extension
+        const match = filename.match(/(.+)\.([^.]+)$/);
+        const fileId = match ? match[1] : filename;
+        const extension = match ? match[2] : '';
+        
+        // FileSystem.getInfoAsync with size:true returns modificationTime and size
+        // but the types don't include these, so we need to cast
+        const fileInfoWithMeta = fileInfo as any;
+        
+        return {
+          path: filePath,
+          id: fileId,
+          extension,
+          size: fileInfoWithMeta.size || 0,
+          modTime: fileInfoWithMeta.modificationTime || 0,
+          filename
+        };
+      });
+      
+      const fileInfos = await Promise.all(fileInfoPromises);
+      
+      // Sort files by modification time (oldest first)
+      return fileInfos.sort((a, b) => a.modTime - b.modTime);
+    } catch (error) {
+      console.error("Error getting cached files:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Free up space in the cache by deleting oldest files
+   * @param requiredSpace Space needed in bytes
+   */
+  freeUpCacheSpace: async (requiredSpace: number) => {
+    try {
+      let freedSpace = 0;
+      const cachedFiles = await get().getCachedFiles();
+      
+      // Delete files until we have freed enough space
+      for (const file of cachedFiles) {
+        // Skip deleting the file if we've already freed enough space
+        if (freedSpace >= requiredSpace) {
+          break;
+        }
+        
+        // Delete the file
+        await FileSystem.deleteAsync(file.path);
+        freedSpace += file.size;
+        console.log(`Freed up ${file.size} bytes by deleting ${file.filename}`);
+      }
+      
+      return freedSpace;
+    } catch (error) {
+      console.error("Error freeing up cache space:", error);
+      return 0;
+    }
+  },
+
+  /**
    * Check if a file is already cached
    */
   isFileCached: async (fileId: string, extension: string) => {
@@ -295,8 +414,21 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     const filePath = get().getCachedFilePath(song.id, "mp3");
 
     // Check if caching is enabled
-    if (userSettings.offlineMode || userSettings.maxCacheSize > 0) {
+    const shouldCache = userSettings.offlineMode || userSettings.maxCacheSize > 0;
+    if (shouldCache) {
       try {
+        // Estimate the file size - we'll use 10MB as a conservative estimate for an audio file
+        // This could be improved by getting the Content-Length header from a HEAD request
+        const estimatedSizeInBytes = 10 * 1024 * 1024; // 10MB
+        
+        // Check if we have enough space in the cache
+        const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+        
+        if (!hasSpace && userSettings.maxCacheSize > 0) {
+          // Try to free up space by deleting older files
+          await get().freeUpCacheSpace(estimatedSizeInBytes);
+        }
+        
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           streamUrl,
@@ -341,8 +473,20 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     const filePath = get().getCachedFilePath(imageId, "jpg");
 
     // Check if caching is enabled
-    if (userSettings.offlineMode || userSettings.maxCacheSize > 0) {
+    const shouldCache = userSettings.offlineMode || userSettings.maxCacheSize > 0;
+    if (shouldCache) {
       try {
+        // Estimate the file size - we'll use 500KB as a conservative estimate for a cover art
+        const estimatedSizeInBytes = 500 * 1024; // 500KB
+        
+        // Check if we have enough space in the cache
+        const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+        
+        if (!hasSpace && userSettings.maxCacheSize > 0) {
+          // Try to free up space by deleting older files
+          await get().freeUpCacheSpace(estimatedSizeInBytes);
+        }
+        
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           imageUrl,
@@ -523,10 +667,10 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   playSong: async (song: Song) => {
     try {
-      // Unload current sound to free up resources
-      const { sound: currentSound } = get().playback;
-      if (currentSound) {
-        await currentSound.unloadAsync();
+      // Release current player to free up resources
+      const { player: currentPlayer } = get().playback;
+      if (currentPlayer) {
+        currentPlayer.remove();
       }
 
       // Update state to show we're loading
@@ -595,24 +739,24 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         audioSource = { uri: get().getStreamUrl(song.id) };
       }
 
-      // Create a new sound object
-      const { sound } = await Audio.Sound.createAsync(
-        audioSource,
-        { shouldPlay: true },
-      );
+      // Create a new audio player
+      const player = createAudioPlayer(audioSource);
 
       // Configure audio to play in background and silent mode
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
       });
+
+      // Play the song
+      player.play();
 
       // Update playback state
       set({
         playback: {
           isPlaying: true,
           currentSong: song,
-          sound,
+          player,
         },
       });
     } catch (error) {
@@ -649,9 +793,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Pause the currently playing song
    */
   pauseSong: async () => {
-    const { sound } = get().playback;
-    if (sound) {
-      await sound.pauseAsync();
+    const { player } = get().playback;
+    if (player) {
+      player.pause();
       set((state) => ({
         playback: { ...state.playback, isPlaying: false },
       }));
@@ -662,9 +806,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Resume playback of a paused song
    */
   resumeSong: async () => {
-    const { sound } = get().playback;
-    if (sound) {
-      await sound.playAsync();
+    const { player } = get().playback;
+    if (player) {
+      player.play();
       set((state) => ({
         playback: { ...state.playback, isPlaying: true },
       }));
@@ -672,17 +816,17 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   },
 
   /**
-   * Stop playback completely and unload the sound resource
+   * Stop playback completely and release the player resource
    */
   stopSong: async () => {
-    const { sound } = get().playback;
-    if (sound) {
-      await sound.unloadAsync();
+    const { player } = get().playback;
+    if (player) {
+      player.remove();
       set({
         playback: {
           isPlaying: false,
           currentSong: null,
-          sound: null,
+          player: null,
         },
       });
     }
@@ -692,11 +836,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Seek to a specific position in the current song
    */
   seekToPosition: async (positionMillis: number) => {
-    const { sound } = get().playback;
-    if (!sound) return;
+    const { player } = get().playback;
+    if (!player) return;
 
     try {
-      await sound.setPositionAsync(positionMillis);
+      // Convert milliseconds to seconds for expo-audio
+      await player.seekTo(positionMillis / 1000);
     } catch (error) {
       console.error("Error seeking to position:", error);
     }
@@ -746,33 +891,31 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Seek forward 10 seconds in the current song
    */
   seekForward: async () => {
-    const { sound } = get().playback;
-    if (!sound) return;
+    const { player } = get().playback;
+    if (!player) return;
 
-    const status = await sound.getStatusAsync();
-    if (status.isLoaded) {
-      // Seek forward 10 seconds, but don't go beyond the end
-      const newPosition = Math.min(
-        status.positionMillis + 10000,
-        status.durationMillis || 0,
-      );
-      await sound.setPositionAsync(newPosition);
-    }
+    // Get current time in seconds and add 10 seconds
+    const currentTime = player.currentTime;
+    const duration = player.duration;
+    
+    // Seek forward 10 seconds, but don't go beyond the end
+    const newPosition = Math.min(currentTime + 10, duration || 0);
+    await player.seekTo(newPosition);
   },
 
   /**
    * Seek backward 10 seconds in the current song
    */
   seekBackward: async () => {
-    const { sound } = get().playback;
-    if (!sound) return;
+    const { player } = get().playback;
+    if (!player) return;
 
-    const status = await sound.getStatusAsync();
-    if (status.isLoaded) {
-      // Seek backward 10 seconds, but don't go below 0
-      const newPosition = Math.max(status.positionMillis - 10000, 0);
-      await sound.setPositionAsync(newPosition);
-    }
+    // Get current time in seconds and subtract 10 seconds
+    const currentTime = player.currentTime;
+    
+    // Seek backward 10 seconds, but don't go below 0
+    const newPosition = Math.max(currentTime - 10, 0);
+    await player.seekTo(newPosition);
   },
 
   /**
@@ -780,10 +923,10 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * @param speed - Playback rate (1.0 is normal speed)
    */
   setPlaybackRate: async (speed: number) => {
-    const { sound } = get().playback;
-    if (!sound) return;
+    const { player } = get().playback;
+    if (!player) return;
 
-    // The second parameter (true) maintains the pitch even when speed changes
-    await sound.setRateAsync(speed, true);
+    // Use the new setPlaybackRate method with pitch correction
+    player.setPlaybackRate(speed, 'medium');
   },
 }));
