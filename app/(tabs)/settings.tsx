@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Switch,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
@@ -43,13 +45,21 @@ export default function SettingsScreen() {
   const [maxCacheSize, setMaxCacheSize] = useState<number>(
     userSettings.maxCacheSize || 10,
   );
+  const [maxCacheSizeInput, setMaxCacheSizeInput] = useState<string>(
+    (userSettings.maxCacheSize || 10).toString(),
+  );
+
+  // Debug: Log initial values
+  useEffect(() => {
+    console.log(`Initial maxCacheSize from userSettings: ${userSettings.maxCacheSize} (type: ${typeof userSettings.maxCacheSize})`);
+  }, []);
 
   // Calculate cache size on component mount
   useEffect(() => {
     calculateCacheSize();
   }, []);
 
-  // Auto-save settings when values change
+  // Auto-save settings when values change (with debounce for maxCacheSize)
   useEffect(() => {
     const saveSettings = async () => {
       try {
@@ -62,8 +72,22 @@ export default function SettingsScreen() {
       }
     };
 
-    saveSettings();
+    // Debounce the save for maxCacheSize changes
+    const timeoutId = setTimeout(() => {
+      saveSettings();
+    }, 1000); // Wait 1 second after last change
+
+    return () => clearTimeout(timeoutId);
   }, [offlineMode, maxCacheSize, setUserSettings]);
+
+  // Sync local state when userSettings changes (e.g., when loaded from storage)
+  useEffect(() => {
+    if (userSettings.maxCacheSize !== undefined) {
+      console.log(`Syncing userSettings.maxCacheSize: ${userSettings.maxCacheSize} (type: ${typeof userSettings.maxCacheSize})`);
+      setMaxCacheSize(userSettings.maxCacheSize);
+      setMaxCacheSizeInput(userSettings.maxCacheSize.toString());
+    }
+  }, [userSettings.maxCacheSize]);
 
   const validateInputs = () => {
     if (!serverUrl.trim()) {
@@ -214,257 +238,289 @@ export default function SettingsScreen() {
   };
 
   const incrementCacheSize = () => {
-    setMaxCacheSize(maxCacheSize + 1);
+    const newValue = parseFloat((maxCacheSize + 0.5).toFixed(1));
+    setMaxCacheSize(newValue);
+    setMaxCacheSizeInput(newValue.toString());
   };
 
   const decrementCacheSize = () => {
-    setMaxCacheSize(Math.max(1, maxCacheSize - 1));
+    const newValue = Math.max(0, parseFloat((maxCacheSize - 0.5).toFixed(1)));
+    setMaxCacheSize(newValue);
+    setMaxCacheSizeInput(newValue.toString());
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
-      </View>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        </View>
 
-      <View style={styles.content}>
-        {/* Server Configuration Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Server Configuration
-          </Text>
-
-          {error && (
-            <View style={[styles.messageContainer, styles.errorContainer]}>
-              <XCircle color={colors.error} size={20} />
-              <Text style={[styles.messageText, { color: colors.error }]}>
-                {error}
-              </Text>
-            </View>
-          )}
-
-          {success && (
-            <View style={[styles.messageContainer, styles.successContainer]}>
-              <CheckCircle2 color={colors.success} size={20} />
-              <Text style={[styles.messageText, { color: colors.success }]}>
-                Connection successful!
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Server URL
+        <View style={styles.content}>
+          {/* Server Configuration Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Server Configuration
             </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={serverUrl}
-              onChangeText={(text) => {
-                setServerUrl(text);
-                setError(null);
-                setSuccess(false);
-              }}
-              placeholder="https://your-server.com/subsonic"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Username
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={username}
-              onChangeText={(text) => {
-                setUsername(text);
-                setError(null);
-                setSuccess(false);
-              }}
-              placeholder="Username"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Password
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setError(null);
-                setSuccess(false);
-              }}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              { backgroundColor: colors.primary },
-              isLoading && styles.buttonDisabled,
-            ]}
-            onPress={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Text style={[styles.buttonText, { color: colors.text }]}>
-                Save Configuration
-              </Text>
+
+            {error && (
+              <View style={[styles.messageContainer, styles.errorContainer]}>
+                <XCircle color={colors.error} size={20} />
+                <Text style={[styles.messageText, { color: colors.error }]}>
+                  {error}
+                </Text>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
 
-        {/* Offline Mode Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Offline Mode
-          </Text>
-          <View>
-            <View style={styles.settingRow}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
-                Enable Offline Mode
+            {success && (
+              <View style={[styles.messageContainer, styles.successContainer]}>
+                <CheckCircle2 color={colors.success} size={20} />
+                <Text style={[styles.messageText, { color: colors.success }]}>
+                  Connection successful!
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                Server URL
               </Text>
-              <Switch
-                value={offlineMode}
-                onValueChange={toggleOfflineMode}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.surface}
-              />
-            </View>
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-              When enabled, the app will use only cached content when no
-              internet connection is available
-            </Text>
-          </View>
-        </View>
-
-        {/* Unified Cache Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Cache Management
-          </Text>
-
-          {/* Cache Info */}
-          <View style={[styles.cacheInfoContainer]}>
-            <Text style={[styles.cacheInfoText, { color: colors.text }]}>
-              {isCalculatingCache
-                ? "Calculating cache size..."
-                : cacheSize !== null
-                  ? `Space usage: ${cacheSize.toFixed(2)} MB`
-                  : "Space usage unavailable"}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.smallClearButton,
-                { backgroundColor: colors.error },
-              ]}
-              onPress={handleClearCache}
-              disabled={isCalculatingCache}
-            >
-              <Trash2 color={colors.text} size={14} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Cache Size Control */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Max Cache Size (GB)
-            </Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={[
-                  styles.stepperButton,
-                  { backgroundColor: colors.surface },
-                ]}
-                onPress={decrementCacheSize}
-              >
-                <MinusCircle color={colors.textSecondary} size={20} />
-              </TouchableOpacity>
               <TextInput
                 style={[
-                  styles.stepperInput,
+                  styles.input,
                   {
                     backgroundColor: colors.surface,
                     color: colors.text,
                     borderColor: colors.border,
                   },
                 ]}
-                value={maxCacheSize.toString()}
+                value={serverUrl}
                 onChangeText={(text) => {
-                  const numValue = parseFloat(text);
-                  if (!isNaN(numValue) && numValue >= 0) {
-                    setMaxCacheSize(numValue);
-                  }
+                  setServerUrl(text);
+                  setError(null);
+                  setSuccess(false);
                 }}
-                placeholder="10"
+                placeholder="https://your-server.com/subsonic"
                 placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
-              <TouchableOpacity
-                style={[
-                  styles.stepperButton,
-                  { backgroundColor: colors.surface },
-                ]}
-                onPress={incrementCacheSize}
-              >
-                <PlusCircle color={colors.textSecondary} size={20} />
-              </TouchableOpacity>
             </View>
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-              Maximum storage space for all cached files (songs and images) in GB
-            </Text>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                Username
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surface,
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  setError(null);
+                  setSuccess(false);
+                }}
+                placeholder="Username"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                Password
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surface,
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setError(null);
+                  setSuccess(false);
+                }}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: colors.primary },
+                isLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleSave}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <Text style={[styles.buttonText, { color: colors.text }]}>
+                  Save Configuration
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* View Cached Songs Button */}
-          <TouchableOpacity
-            style={[styles.viewCachedButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => router.push("/cached-songs")}
-          >
-            <View style={styles.buttonContent}>
-              <HardDrive color={colors.textSecondary} size={18} />
-              <Text style={[styles.viewCachedButtonText, { color: colors.text }]}>
-                View Cached Songs
+          {/* Offline Mode Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Offline Mode
+            </Text>
+            <View>
+              <View style={styles.settingRow}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  Enable Offline Mode
+                </Text>
+                <Switch
+                  value={offlineMode}
+                  onValueChange={toggleOfflineMode}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+              <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                When enabled, the app will use only cached content when no
+                internet connection is available
               </Text>
             </View>
-          </TouchableOpacity>
+          </View>
+
+          {/* Unified Cache Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Cache Management
+            </Text>
+
+            {/* Cache Info */}
+            <View style={[styles.cacheInfoContainer]}>
+              <Text style={[styles.cacheInfoText, { color: colors.text }]}>
+                {isCalculatingCache
+                  ? "Calculating cache size..."
+                  : cacheSize !== null
+                    ? `Space usage: ${cacheSize.toFixed(2)} MB`
+                    : "Space usage unavailable"}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.smallClearButton,
+                  { backgroundColor: colors.error },
+                ]}
+                onPress={handleClearCache}
+                disabled={isCalculatingCache}
+              >
+                <Trash2 color={colors.text} size={14} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Cache Size Control */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                Max Cache Size (GB)
+              </Text>
+              <View style={styles.stepper}>
+                <TouchableOpacity
+                  style={[
+                    styles.stepperButton,
+                    { backgroundColor: colors.surface },
+                  ]}
+                  onPress={decrementCacheSize}
+                >
+                  <MinusCircle color={colors.textSecondary} size={20} />
+                </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.stepperInput,
+                    {
+                      backgroundColor: colors.surface,
+                      color: colors.text,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  value={maxCacheSizeInput}
+                  onChangeText={(text) => {
+                    // Store the raw input for display
+                    setMaxCacheSizeInput(text);
+
+                    // Normalize decimal separator (replace comma with dot for parsing)
+                    const normalizedText = text.replace(',', '.');
+
+                    // Only update the actual maxCacheSize if it's a valid number
+                    const numValue = parseFloat(normalizedText);
+                    if (!isNaN(numValue) && numValue >= 0) {
+                      setMaxCacheSize(numValue);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Normalize decimal separator for parsing
+                    const normalizedInput = maxCacheSizeInput.replace(',', '.');
+                    const numValue = parseFloat(normalizedInput);
+
+                    if (isNaN(numValue) || numValue < 0) {
+                      // Reset to previous valid value
+                      setMaxCacheSizeInput(maxCacheSize.toString());
+                    } else {
+                      // Update to cleaned value, preserving decimals
+                      setMaxCacheSize(numValue);
+                      setMaxCacheSizeInput(numValue.toString());
+                    }
+                  }}
+                  placeholder="10.0"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="decimal-pad"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.stepperButton,
+                    { backgroundColor: colors.surface },
+                  ]}
+                  onPress={incrementCacheSize}
+                >
+                  <PlusCircle color={colors.textSecondary} size={20} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                Maximum storage space for all cached files (songs and images) in GB
+              </Text>
+            </View>
+
+            {/* View Cached Songs Button */}
+            <TouchableOpacity
+              style={[styles.viewCachedButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push("/cached-songs")}
+            >
+              <View style={styles.buttonContent}>
+                <HardDrive color={colors.textSecondary} size={18} />
+                <Text style={[styles.viewCachedButtonText, { color: colors.text }]}>
+                  View Cached Songs
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -543,6 +599,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
+    padding: 16,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 8,
   },
