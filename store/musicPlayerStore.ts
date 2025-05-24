@@ -8,6 +8,11 @@ import * as FileSystem from "expo-file-system";
 // Define a single cache directory for all files
 const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
 
+// Track if a cache cleanup operation is in progress
+let cacheCleanupInProgress = false;
+// Track which files have been deleted in the current session to avoid double deletion
+let recentlyDeletedFiles: Set<string> = new Set();
+
 /**
  * Represents a song in the Subsonic API
  */
@@ -246,13 +251,45 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // Check if the cache directory exists
       const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
       if (cacheInfo.exists) {
-        await FileSystem.deleteAsync(CACHE_DIRECTORY);
+        try {
+          // Try to delete the entire directory first
+          await FileSystem.deleteAsync(CACHE_DIRECTORY);
+        } catch (deleteError) {
+          console.log("Could not delete the entire cache directory, trying file by file:", deleteError);
+          
+          // If deleting the whole directory fails, try deleting individual files
+          try {
+            const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
+            for (const file of files) {
+              const filePath = CACHE_DIRECTORY + file;
+              try {
+                const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
+                if (fileInfo.exists) {
+                  await FileSystem.deleteAsync(filePath);
+                  // Display size in MB for better readability
+                  const fileSize = (fileInfo as any).size || 0;
+                  console.log(`Deleted cached file: ${file} (${(fileSize / (1024 * 1024)).toFixed(2)} MB)`);
+                }
+              } catch (fileDeleteError) {
+                console.log(`Could not delete file ${file}:`, fileDeleteError);
+                // Continue with next file
+              }
+            }
+          } catch (readDirError) {
+            console.error("Error reading cache directory:", readDirError);
+          }
+        }
       }
 
-      // Recreate the directory to ensure it exists for future caching
-      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
-        intermediates: true,
-      });
+      // Make sure the cache directory exists for future use
+      try {
+        // Recreate the directory to ensure it exists for future caching
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
+      } catch (mkdirError) {
+        console.error("Error creating cache directory:", mkdirError);
+      }
 
       return Promise.resolve();
     } catch (error) {
@@ -298,7 +335,13 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       const maxCacheSizeInBytes = userSettings.maxCacheSize * 1024 * 1024 * 1024;
       
       // Check if adding the new file would exceed the limit
-      return (currentCacheSize + sizeInBytes) <= maxCacheSizeInBytes;
+      const hasSpace = (currentCacheSize + sizeInBytes) <= maxCacheSizeInBytes;
+      
+      // Log cache usage info
+      const usagePercentage = ((currentCacheSize / maxCacheSizeInBytes) * 100).toFixed(1);
+      console.log(`Cache usage: ${(currentCacheSize / (1024 * 1024)).toFixed(2)}MB / ${userSettings.maxCacheSize.toFixed(2)}GB (${usagePercentage}%)`);
+      
+      return hasSpace;
     } catch (error) {
       console.error("Error checking cache space:", error);
       return false;
@@ -311,33 +354,47 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   getCachedFiles: async () => {
     try {
+      // First check if the directory exists
+      const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+      if (!dirInfo.exists) {
+        // Create the directory if it doesn't exist
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        return []; // Return empty array since we just created the directory
+      }
+      
       const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
       
       // Get info for each file including creation date and size
-      const fileInfoPromises = files.map(async (filename) => {
-        const filePath = CACHE_DIRECTORY + filename;
-        const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
-        
-        // Extract the file ID and extension
-        const match = filename.match(/(.+)\.([^.]+)$/);
-        const fileId = match ? match[1] : filename;
-        const extension = match ? match[2] : '';
-        
-        // FileSystem.getInfoAsync with size:true returns modificationTime and size
-        // but the types don't include these, so we need to cast
-        const fileInfoWithMeta = fileInfo as any;
-        
-        return {
-          path: filePath,
-          id: fileId,
-          extension,
-          size: fileInfoWithMeta.size || 0,
-          modTime: fileInfoWithMeta.modificationTime || 0,
-          filename
-        };
-      });
-      
-      const fileInfos = await Promise.all(fileInfoPromises);
+      const fileInfos = [];
+      for (const filename of files) {
+        try {
+          const filePath = CACHE_DIRECTORY + filename;
+          const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
+          
+          if (fileInfo.exists) {
+            // Extract the file ID and extension
+            const match = filename.match(/(.+)\.([^.]+)$/);
+            const fileId = match ? match[1] : filename;
+            const extension = match ? match[2] : '';
+            
+            // FileSystem.getInfoAsync with size:true returns modificationTime and size
+            // but the types don't include these, so we need to cast
+            const fileInfoWithMeta = fileInfo as any;
+            
+            fileInfos.push({
+              path: filePath,
+              id: fileId,
+              extension,
+              size: fileInfoWithMeta.size || 0,
+              modTime: fileInfoWithMeta.modificationTime || 0,
+              filename
+            });
+          }
+        } catch (fileError) {
+          console.log(`Error getting info for file ${filename}:`, fileError);
+          // Skip this file and continue with others
+        }
+      }
       
       // Sort files by modification time (oldest first)
       return fileInfos.sort((a, b) => a.modTime - b.modTime);
@@ -352,27 +409,75 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * @param requiredSpace Space needed in bytes
    */
   freeUpCacheSpace: async (requiredSpace: number) => {
+    if (cacheCleanupInProgress) {
+      console.log("Cache cleanup already in progress, skipping duplicate cleanup");
+      return 0; // Return 0 to indicate no additional space was freed
+    }
+
     try {
+      cacheCleanupInProgress = true;
+      
       let freedSpace = 0;
+      const { userSettings } = get();
       const cachedFiles = await get().getCachedFiles();
+      
+      // Calculate how much space we need to free
+      const currentCacheSize = await get().getCacheSize();
+      const maxCacheSizeInBytes = userSettings.maxCacheSize * 1024 * 1024 * 1024;
+      
+      // We need to free enough space for the new file AND to bring the total under the limit
+      const targetFreeSpace = Math.max(
+        requiredSpace,
+        currentCacheSize + requiredSpace - maxCacheSizeInBytes
+      );
+      
+      console.log(`Current cache: ${(currentCacheSize / (1024 * 1024)).toFixed(2)} MB, ` + 
+                  `Max cache: ${(maxCacheSizeInBytes / (1024 * 1024)).toFixed(2)} MB, ` +
+                  `Need to free: ${(targetFreeSpace / (1024 * 1024)).toFixed(2)} MB`);
+      
+      // Clear recently deleted files set at the start of each cleanup session
+      recentlyDeletedFiles.clear();
       
       // Delete files until we have freed enough space
       for (const file of cachedFiles) {
         // Skip deleting the file if we've already freed enough space
-        if (freedSpace >= requiredSpace) {
+        if (freedSpace >= targetFreeSpace) {
           break;
         }
         
-        // Delete the file
-        await FileSystem.deleteAsync(file.path);
-        freedSpace += file.size;
-        console.log(`Freed up ${file.size} bytes by deleting ${file.filename}`);
+        // Skip files we've already tried to delete in this session
+        if (recentlyDeletedFiles.has(file.path)) {
+          console.log(`Already attempted to delete ${file.filename}, skipping`);
+          continue;
+        }
+        
+        // Mark this file as processed
+        recentlyDeletedFiles.add(file.path);
+        
+        // Check if file exists before attempting to delete it
+        const fileExists = await FileSystem.getInfoAsync(file.path);
+        if (fileExists.exists) {
+          try {
+            // Delete the file
+            await FileSystem.deleteAsync(file.path);
+            freedSpace += file.size;
+            console.log(`Freed up ${(file.size / (1024 * 1024)).toFixed(2)} MB by deleting ${file.filename}`);
+          } catch (deleteError) {
+            console.log(`Could not delete file ${file.filename}:`, deleteError);
+            // Continue with next file rather than aborting the whole operation
+          }
+        } else {
+          console.log(`File ${file.filename} no longer exists, skipping`);
+        }
       }
       
       return freedSpace;
     } catch (error) {
       console.error("Error freeing up cache space:", error);
       return 0;
+    } finally {
+      // Reset the lock when we're done, regardless of success or failure
+      cacheCleanupInProgress = false;
     }
   },
 
@@ -380,9 +485,24 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Check if a file is already cached
    */
   isFileCached: async (fileId: string, extension: string) => {
-    const filePath = get().getCachedFilePath(fileId, extension);
-    const fileInfo = await FileSystem.getInfoAsync(filePath);
-    return fileInfo.exists;
+    try {
+      const filePath = get().getCachedFilePath(fileId, extension);
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      
+      // Verify that the file exists AND has content (size > 0)
+      if (fileInfo.exists) {
+        // Optional: Check if the file has content by getting its size
+        const fileWithSize = await FileSystem.getInfoAsync(filePath, { size: true });
+        const fileSize = (fileWithSize as any).size || 0;
+        
+        // Consider a file correctly cached only if it has content
+        return fileSize > 0;
+      }
+      return false;
+    } catch (error) {
+      console.error(`Error checking if file is cached (${fileId}.${extension}):`, error);
+      return false;
+    }
   },
 
   /**
@@ -398,15 +518,32 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   downloadSong: async (song: Song) => {
     const { userSettings } = get();
 
-    // If already cached, return the cached path
-    if (await get().isFileCached(song.id, "mp3")) {
-      return get().getCachedFilePath(song.id, "mp3");
+    try {
+      // If already cached, return the cached path
+      if (await get().isFileCached(song.id, "mp3")) {
+        return get().getCachedFilePath(song.id, "mp3");
+      }
+    } catch (cacheCheckError) {
+      console.log(`Error checking if song is cached for ${song.title}:`, cacheCheckError);
+      // Continue with downloading even if there was an error checking the cache
     }
 
     // Ensure directory exists
-    const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+    try {
+      const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+      }
+    } catch (dirError) {
+      console.error(`Error ensuring cache directory exists for song ${song.title}:`, dirError);
+      // Create a new attempt to make the directory
+      try {
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+      } catch (retryError) {
+        console.error(`Failed to create cache directory on retry:`, retryError);
+        // If we can't create the directory, we can't cache the file
+        return get().getStreamUrl(song.id);
+      }
     }
 
     // Get the stream URL and download the song
@@ -421,12 +558,23 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         // This could be improved by getting the Content-Length header from a HEAD request
         const estimatedSizeInBytes = 10 * 1024 * 1024; // 10MB
         
-        // Check if we have enough space in the cache
-        const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
-        
-        if (!hasSpace && userSettings.maxCacheSize > 0) {
-          // Try to free up space by deleting older files
-          await get().freeUpCacheSpace(estimatedSizeInBytes);
+        // Only proceed with caching if caching size is greater than 0
+        if (userSettings.maxCacheSize > 0) {
+          // Check if we have enough space in the cache
+          const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+          
+          if (!hasSpace) {
+            // Try to free up space by deleting older files
+            const freedSpace = await get().freeUpCacheSpace(estimatedSizeInBytes);
+            console.log(`Freed ${(freedSpace / (1024 * 1024)).toFixed(2)} MB of cache space`);
+            
+            // Verify we now have enough space
+            const recheckedSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+            if (!recheckedSpace && !userSettings.offlineMode) {
+              console.log("Still not enough cache space after cleanup, using stream URL");
+              return streamUrl;
+            }
+          }
         }
         
         // Download the file
@@ -457,19 +605,36 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   downloadImage: async (imageId: string, songTitle: string) => {
     const { userSettings } = get();
 
-    // If already cached, return the cached path
-    if (await get().isFileCached(imageId, "jpg")) {
-      console.log(`Image already cached: ${songTitle}`);
-      return get().getCachedFilePath(imageId, "jpg");
+    try {
+      // If already cached, return the cached path
+      if (await get().isFileCached(imageId, "jpg")) {
+        console.log(`Image already cached: ${songTitle}`);
+        return get().getCachedFilePath(imageId, "jpg");
+      }
+    } catch (cacheCheckError) {
+      console.log(`Error checking if image is cached for ${songTitle}:`, cacheCheckError);
+      // Continue with downloading even if there was an error checking the cache
     }
 
     // Log that we're starting to download
     console.log(`Starting background download: ${songTitle}`);
 
     // Ensure directory exists
-    const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+    try {
+      const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+      }
+    } catch (dirError) {
+      console.error(`Error ensuring cache directory exists for image ${songTitle}:`, dirError);
+      // Create a new attempt to make the directory
+      try {
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+      } catch (retryError) {
+        console.error(`Failed to create cache directory on retry:`, retryError);
+        // If we can't create the directory, we can't cache the file
+        return get().getCoverArtUrl(imageId);
+      }
     }
 
     // Get the cover art URL and download the image
@@ -480,17 +645,6 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     const shouldCache = userSettings.offlineMode || userSettings.maxCacheSize > 0;
     if (shouldCache) {
       try {
-        // Estimate the file size - we'll use 500KB as a conservative estimate for a cover art
-        const estimatedSizeInBytes = 500 * 1024; // 500KB
-        
-        // Check if we have enough space in the cache
-        const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
-        
-        if (!hasSpace && userSettings.maxCacheSize > 0) {
-          // Try to free up space by deleting older files
-          await get().freeUpCacheSpace(estimatedSizeInBytes);
-        }
-        
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           imageUrl,
@@ -704,6 +858,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // Cache handling section
       if (userSettings.maxCacheSize > 0) {
         // Start a promise to handle the audio caching
+        // For new songs, we'll first perform cache cleanup once if needed
         const audioCachePromise = isCached 
           ? Promise.resolve(get().getCachedFilePath(song.id, "mp3")) 
           : get().downloadSong(song).catch(err => {
@@ -717,6 +872,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           const isImageCached = await get().isFileCached(song.coverArt, "jpg");
           if (!isImageCached) {
             // Download image in the background, don't await
+            // Image download will skip cache management and use the song's cleanup
             imageCachePromise = get().downloadImage(song.coverArt, song.title).then(() => {})
               .catch(err => console.warn(`Background image caching failed for ${song.coverArt}:`, err));
           }

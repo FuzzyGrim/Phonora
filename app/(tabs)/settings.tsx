@@ -49,11 +49,6 @@ export default function SettingsScreen() {
     (userSettings.maxCacheSize || 10).toString(),
   );
 
-  // Debug: Log initial values
-  useEffect(() => {
-    console.log(`Initial maxCacheSize from userSettings: ${userSettings.maxCacheSize} (type: ${typeof userSettings.maxCacheSize})`);
-  }, []);
-
   // Calculate cache size on component mount
   useEffect(() => {
     calculateCacheSize();
