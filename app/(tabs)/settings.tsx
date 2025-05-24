@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Switch,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -17,21 +16,17 @@ import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import {
   CircleCheck as CheckCircle2,
   Circle as XCircle,
-  Trash2,
   MinusCircle,
   PlusCircle,
   HardDrive,
 } from "lucide-react-native";
 import md5 from "md5";
-import * as FileSystem from "expo-file-system";
 import { router } from "expo-router";
 
-// Define cache directory
-const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
-  const { config, setConfig, userSettings, setUserSettings, clearCache } =
+  const { config, setConfig, userSettings, setUserSettings } =
     useMusicPlayerStore();
   const [serverUrl, setServerUrl] = useState(config?.serverUrl || "");
   const [username, setUsername] = useState(config?.username || "");
@@ -39,8 +34,6 @@ export default function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [cacheSize, setCacheSize] = useState<number | null>(null);
-  const [isCalculatingCache, setIsCalculatingCache] = useState(false);
   const [offlineMode, setOfflineMode] = useState(userSettings.offlineMode);
   const [maxCacheSize, setMaxCacheSize] = useState<number>(
     userSettings.maxCacheSize || 10,
@@ -48,11 +41,6 @@ export default function SettingsScreen() {
   const [maxCacheSizeInput, setMaxCacheSizeInput] = useState<string>(
     (userSettings.maxCacheSize || 10).toString(),
   );
-
-  // Calculate cache size on component mount
-  useEffect(() => {
-    calculateCacheSize();
-  }, []);
 
   // Auto-save settings when values change (with debounce for maxCacheSize)
   useEffect(() => {
@@ -168,68 +156,6 @@ export default function SettingsScreen() {
 
   const toggleOfflineMode = (value: boolean) => {
     setOfflineMode(value);
-  };
-
-  const calculateCacheSize = async () => {
-    setIsCalculatingCache(true);
-    try {
-      // Check if directory exists
-      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
-
-      let totalSize = 0;
-
-      if (cacheInfo.exists) {
-        const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
-        for (const file of files) {
-          const fileInfo = await FileSystem.getInfoAsync(
-            `${CACHE_DIRECTORY}${file}`
-          );
-          if (fileInfo.exists && fileInfo.size) {
-            totalSize += fileInfo.size;
-          }
-        }
-      }
-
-      // Convert to MB
-      const totalSizeMB = totalSize / (1024 * 1024);
-      setCacheSize(totalSizeMB);
-    } catch (error) {
-      console.error("Error calculating cache size:", error);
-      setCacheSize(null);
-    } finally {
-      setIsCalculatingCache(false);
-    }
-  };
-
-  const handleClearCache = async () => {
-    Alert.alert("Clear Cache", "Are you sure you want to clear all cached files?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: async () => {
-          setIsCalculatingCache(true);
-          try {
-            await clearCache();
-            setCacheSize(0);
-            Alert.alert(
-              "Success",
-              "Cache cleared successfully"
-            );
-          } catch (error) {
-            Alert.alert(
-              "Error",
-              `Failed to clear cache, error: ${error}`
-            );
-          } finally {
-            setIsCalculatingCache(false);
-          }
-        },
-      },
-    ]);
   };
 
   const incrementCacheSize = () => {
@@ -408,27 +334,6 @@ export default function SettingsScreen() {
               Cache Management
             </Text>
 
-            {/* Cache Info */}
-            <View style={[styles.cacheInfoContainer]}>
-              <Text style={[styles.cacheInfoText, { color: colors.text }]}>
-                {isCalculatingCache
-                  ? "Calculating cache size..."
-                  : cacheSize !== null
-                    ? `Space usage: ${cacheSize.toFixed(2)} MB`
-                    : "Space usage unavailable"}
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.smallClearButton,
-                  { backgroundColor: colors.error },
-                ]}
-                onPress={handleClearCache}
-                disabled={isCalculatingCache}
-              >
-                <Trash2 color={colors.text} size={14} />
-              </TouchableOpacity>
-            </View>
-
             {/* Cache Size Control */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -589,19 +494,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     fontFamily: "Inter-Regular",
-  },
-  cacheInfoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: 8,
-  },
-  cacheInfoText: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-    flex: 1,
   },
   settingRow: {
     flexDirection: "row",

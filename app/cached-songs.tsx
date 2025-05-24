@@ -7,11 +7,12 @@ import {
     Image,
     ActivityIndicator,
     TouchableOpacity,
+    Alert,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
 import * as FileSystem from "expo-file-system";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, HardDrive, Music2 } from "lucide-react-native";
 import { router } from "expo-router";
 
 // Define cache directory
@@ -46,7 +47,7 @@ interface CachedSongGroup {
 
 export default function CachedSongsScreen() {
     const { colors } = useTheme();
-    const { songs } = useMusicPlayerStore();
+    const { songs, clearCache } = useMusicPlayerStore();
     const [isLoading, setIsLoading] = useState(true);
     const [cachedFiles, setCachedFiles] = useState<CachedFileInfo[]>([]);
     const [cachedSongs, setCachedSongs] = useState<CachedSongGroup[]>([]);
@@ -183,14 +184,37 @@ export default function CachedSongsScreen() {
                     </Text>
                 </View>
             ) : (
-                <>
-                    <View style={[styles.summaryContainer, { borderColor: colors.border }]}>
-                        <Text style={[styles.summaryText, { color: colors.text }]}>
-                            Total Cache Size: {formatFileSize(totalCacheSize)}
-                        </Text>
-                        <Text style={[styles.summaryText, { color: colors.text }]}>
-                            Cached Songs: {cachedSongs.length}
-                        </Text>
+                <View style={styles.contentContainer}>
+                    <View style={[styles.summaryContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={styles.summaryStats}>
+                            <View style={styles.statItem}>
+                                <View style={styles.statWithIcon}>
+                                    <HardDrive color={colors.primary} size={20} style={styles.statIcon} />
+                                    <View style={styles.statTextContainer}>
+                                        <Text style={[styles.statValue, { color: colors.text }]}>
+                                            {formatFileSize(totalCacheSize)}
+                                        </Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                                            Total Size
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <View style={[styles.statWithIcon, { paddingLeft: 16 }]}>
+                                    <Music2 color={colors.primary} size={20} style={styles.statIcon} />
+                                    <View style={styles.statTextContainer}>
+                                        <Text style={[styles.statValue, { color: colors.text }]}>
+                                            {cachedSongs.length}
+                                        </Text>
+                                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                                            Songs
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
                     </View>
 
                     {cachedSongs.length === 0 ? (
@@ -200,42 +224,78 @@ export default function CachedSongsScreen() {
                             </Text>
                         </View>
                     ) : (
-                        <FlatList
-                            data={cachedSongs}
-                            keyExtractor={(item) => item.songId}
-                            contentContainerStyle={styles.listContent}
-                            renderItem={({ item }) => (
-                                <View style={[styles.songCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                                    <View style={styles.songImageContainer}>
-                                        {item.imagePath ? (
-                                            <Image source={{ uri: item.imagePath }} style={styles.songImage} />
-                                        ) : (
-                                            <View style={[styles.placeholderImage, { backgroundColor: colors.border }]} />
-                                        )}
-                                    </View>
-                                    <View style={styles.songDetails}>
-                                        <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
-                                            {item.title}
-                                        </Text>
-                                        <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-                                            {item.artist} • {item.album}
-                                        </Text>
-                                        <View style={styles.sizeInfo}>
-                                            <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
-                                                Audio: {formatFileSize(item.songSize)}
-                                            </Text>
-                                            {item.imageSize && (
-                                                <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
-                                                    Image: {formatFileSize(item.imageSize)}
-                                                </Text>
+                        <>
+                            <FlatList
+                                data={cachedSongs}
+                                keyExtractor={(item) => item.songId}
+                                contentContainerStyle={styles.listContent}
+                                renderItem={({ item }) => (
+                                    <View style={[styles.songCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                                        <View style={styles.songImageContainer}>
+                                            {item.imagePath ? (
+                                                <Image source={{ uri: item.imagePath }} style={styles.songImage} />
+                                            ) : (
+                                                <View style={[styles.placeholderImage, { backgroundColor: colors.border }]} />
                                             )}
                                         </View>
+                                        <View style={styles.songDetails}>
+                                            <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
+                                                {item.title}
+                                            </Text>
+                                            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                                                {item.artist} • {item.album}
+                                            </Text>
+                                            <View style={styles.sizeInfo}>
+                                                <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
+                                                    Audio: {formatFileSize(item.songSize)}
+                                                </Text>
+                                                {item.imageSize && (
+                                                    <Text style={[styles.sizeText, { color: colors.textSecondary }]}>
+                                                        Image: {formatFileSize(item.imageSize)}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                        </View>
                                     </View>
-                                </View>
-                            )}
-                        />
+                                )}
+                            />
+
+                            <TouchableOpacity
+                                style={[styles.clearCacheButton, { backgroundColor: colors.error }]}
+                                onPress={() => {
+                                    Alert.alert(
+                                        "Clear Cache",
+                                        "Are you sure you want to clear all cached songs and images?",
+                                        [
+                                            { text: "Cancel", style: "cancel" },
+                                            {
+                                                text: "Clear",
+                                                style: "destructive",
+                                                onPress: async () => {
+                                                    setIsLoading(true);
+                                                    try {
+                                                        await clearCache();
+                                                        setCachedFiles([]);
+                                                        setCachedSongs([]);
+                                                        setTotalCacheSize(0);
+                                                    } catch (error) {
+                                                        console.error("Error clearing cache:", error);
+                                                    } finally {
+                                                        setIsLoading(false);
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <Text style={[styles.clearCacheButtonText, { color: "#fff" }]}>
+                                    Clear Cache
+                                </Text>
+                            </TouchableOpacity>
+                        </>
                     )}
-                </>
+                </View>
             )}
         </View>
     );
@@ -268,16 +328,63 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: "Inter-Regular",
     },
+    contentContainer: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+    },
     summaryContainer: {
-        padding: 15,
         margin: 16,
         borderWidth: 1,
-        borderRadius: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
     },
-    summaryText: {
+    summaryStats: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        padding: 16,
+    },
+    statItem: {
+        flex: 1,
+    },
+    statWithIcon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statIcon: {
+        marginRight: 12,
+    },
+    statTextContainer: {
+        flex: 1,
+    },
+    statValue: {
+        fontSize: 18,
+        fontFamily: "Inter-Bold",
+    },
+    statLabel: {
+        fontSize: 14,
+        fontFamily: "Inter-Regular",
+    },
+    statDivider: {
+        height: 40,
+        width: 1,
+        backgroundColor: 'rgba(150, 150, 150, 0.3)',
+    },
+    clearCacheButton: {
+        padding: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 16,
+        borderRadius: 12,
+        position: 'absolute',
+        bottom: 30,
+        left: 0,
+        right: 0,
+    },
+    clearCacheButtonText: {
         fontSize: 16,
-        fontFamily: "Inter-Medium",
-        marginBottom: 6,
+        fontFamily: "Inter-SemiBold",
     },
     emptyContainer: {
         flex: 1,
@@ -290,6 +397,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
+        paddingBottom: 80,
     },
     songCard: {
         flexDirection: "row",
