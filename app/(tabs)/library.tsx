@@ -7,17 +7,17 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { Music, Disc, Users, Tag } from "lucide-react-native";
+import { Music, Disc, Users, Tag, ChevronRight } from "lucide-react-native";
 import { router } from "expo-router";
 
 export default function LibraryScreen() {
   const { colors } = useTheme();
 
   const menuItems = [
-    { icon: Disc, title: "Playlists", count: "0", route: "/(library)/playlists" },
-    { icon: Users, title: "Artists", count: "0", route: "/(library)/artists" },
-    { icon: Music, title: "Albums", count: "0", route: "/(library)/albums" },
-    { icon: Tag, title: "Genres", count: "0", route: "/(library)/genres" },
+    { icon: Disc, title: "Playlists", route: "/(library)/playlists" },
+    { icon: Users, title: "Artists", route: "/(library)/artists" },
+    { icon: Music, title: "Albums", route: "/(library)/albums" },
+    { icon: Tag, title: "Genres", route: "/(library)/genres" },
   ];
 
   return (
@@ -43,7 +43,7 @@ export default function LibraryScreen() {
             <Text
               style={[styles.menuItemCount, { color: colors.textSecondary }]}
             >
-              {item.count}
+              <ChevronRight size={20} color={colors.textSecondary} />
             </Text>
           </TouchableOpacity>
         ))}
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-SemiBold",
   },
   menuItemCount: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inter-Regular",
   },
 });
