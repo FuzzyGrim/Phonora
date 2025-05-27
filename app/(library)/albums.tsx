@@ -12,6 +12,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Disc } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useShallow } from 'zustand/react/shallow';
 
 interface Album {
   id: string;
@@ -25,24 +26,53 @@ export default function AlbumsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [albums, setAlbums] = useState<Album[]>([]);
-  const { config } = useMusicPlayerStore();
+
+  // Access config from the store using shallow equality
+  const { config, getCoverArtUrl } = useMusicPlayerStore(useShallow((state) => ({
+    config: state.config,
+    getCoverArtUrl: state.getCoverArtUrl
+  })));
 
   useEffect(() => {
     // Fetch albums from the server
     const fetchAlbums = async () => {
       setIsLoading(true);
       try {
-        // This is a placeholder. You'll need to implement the actual API call
-        // to fetch albums from your Subsonic server
-        
-        // Example data for UI development
-        setAlbums([
-          { id: "1", name: "Abbey Road", artist: "The Beatles", songCount: 17 },
-          { id: "2", name: "Dark Side of the Moon", artist: "Pink Floyd", songCount: 10 },
-          { id: "3", name: "A Night at the Opera", artist: "Queen", songCount: 12 },
-          { id: "4", name: "Led Zeppelin IV", artist: "Led Zeppelin", songCount: 8 },
-          { id: "5", name: "The Rise and Fall of Ziggy Stardust", artist: "David Bowie", songCount: 11 },
-        ]);
+        if (!config || !config.serverUrl) {
+          console.error("Server configuration is missing");
+          setIsLoading(false);
+          return;
+        }
+
+        // Get the auth parameters from the store
+        const { generateAuthParams } = useMusicPlayerStore.getState();
+        const authParams = generateAuthParams();
+
+        // Make the API call to get all albums
+        const response = await fetch(
+          `${config.serverUrl}/rest/getAlbumList2.view?type=alphabeticalByName&size=500&${authParams.toString()}`
+        );
+
+        const data = await response.json();
+
+        if (data["subsonic-response"].status === "ok" && data["subsonic-response"].albumList2) {
+          const albumsData = data["subsonic-response"].albumList2.album || [];
+
+          // Map the API response to our Album interface
+          const formattedAlbums: Album[] = albumsData.map((album: any) => ({
+            id: album.id,
+            name: album.name,
+            artist: album.artist,
+            songCount: album.songCount,
+            imageUrl: album.coverArt ? getCoverArtUrl(album.coverArt) : undefined,
+          }));
+
+          setAlbums(formattedAlbums);
+        } else {
+          throw new Error(
+            data["subsonic-response"].error?.message || "Failed to fetch albums"
+          );
+        }
       } catch (error) {
         console.error("Error fetching albums:", error);
       } finally {
@@ -51,14 +81,17 @@ export default function AlbumsScreen() {
     };
 
     fetchAlbums();
-  }, []);
+  }, [config, getCoverArtUrl]);
 
   const renderAlbumItem = ({ item }: { item: Album }) => (
     <TouchableOpacity
       style={styles.albumItem}
       onPress={() => {
-        // Navigate to album details screen
-        // This would be implemented in a future step
+        // Navigate to album details screen with the album ID
+        router.push({
+          pathname: "/(tabs)/album-details",
+          params: { id: item.id }
+        });
       }}
     >
       <View style={styles.albumImageContainer}>
@@ -70,13 +103,13 @@ export default function AlbumsScreen() {
           </View>
         )}
       </View>
-      <Text 
+      <Text
         style={[styles.albumName, { color: colors.text }]}
         numberOfLines={1}
       >
         {item.name}
       </Text>
-      <Text 
+      <Text
         style={[styles.albumArtist, { color: colors.textSecondary }]}
         numberOfLines={1}
       >
