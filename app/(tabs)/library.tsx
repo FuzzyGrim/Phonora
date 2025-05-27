@@ -7,16 +7,17 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { Music, Play as Playlist, Download, Clock } from "lucide-react-native";
+import { Music, Disc, Users, Tag } from "lucide-react-native";
+import { router } from "expo-router";
 
 export default function LibraryScreen() {
   const { colors } = useTheme();
 
   const menuItems = [
-    { icon: Music, title: "Songs", count: "0" },
-    { icon: Playlist, title: "Playlists", count: "0" },
-    { icon: Download, title: "Downloads", count: "0" },
-    { icon: Clock, title: "Recently Played", count: "0" },
+    { icon: Disc, title: "Playlists", count: "0", route: "/(library)/playlists" },
+    { icon: Users, title: "Artists", count: "0", route: "/(library)/artists" },
+    { icon: Music, title: "Albums", count: "0", route: "/(library)/albums" },
+    { icon: Tag, title: "Genres", count: "0", route: "/(library)/genres" },
   ];
 
   return (
@@ -31,6 +32,7 @@ export default function LibraryScreen() {
           <TouchableOpacity
             key={index}
             style={[styles.menuItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push(item.route as any)}
           >
             <View style={styles.menuItemLeft}>
               <item.icon size={24} color={colors.primary} />
