@@ -96,7 +96,7 @@ interface MusicPlayerState {
   searchResults: SearchResults | null;
   isSearching: boolean;
   currentPlaylist: {
-    source: 'search' | 'library' | 'album' | 'artist' | 'genre';
+    source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist';
     songs: Song[];
   } | null;
 
@@ -115,7 +115,7 @@ interface MusicPlayerState {
 
   // Playback control
   playSong: (song: Song) => Promise<void>;
-  playSongFromSource: (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre', sourceSongs: Song[]) => Promise<void>;
+  playSongFromSource: (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist', sourceSongs: Song[]) => Promise<void>;
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
@@ -939,7 +939,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Play a song from a specific source (search results, library, album, etc.)
    * Sets the current playlist source for proper next/previous navigation
    */
-  playSongFromSource: async (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre', sourceSongs: Song[]) => {
+  playSongFromSource: async (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist', sourceSongs: Song[]) => {
     // Set the current playlist source
     set({
       currentPlaylist: {
