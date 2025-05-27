@@ -12,6 +12,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, User } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useShallow } from "zustand/react/shallow";
 
 interface Artist {
   id: string;
@@ -24,24 +25,59 @@ export default function ArtistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const { config } = useMusicPlayerStore();
+  const { config } = useMusicPlayerStore(useShallow((state) => ({
+    config: state.config,
+  })));
 
   useEffect(() => {
     // Fetch artists from the server
     const fetchArtists = async () => {
       setIsLoading(true);
       try {
-        // This is a placeholder. You'll need to implement the actual API call
-        // to fetch artists from your Subsonic server
-        
-        // Example data for UI development
-        setArtists([
-          { id: "1", name: "The Beatles", albumCount: 12 },
-          { id: "2", name: "Pink Floyd", albumCount: 8 },
-          { id: "3", name: "Queen", albumCount: 15 },
-          { id: "4", name: "Led Zeppelin", albumCount: 9 },
-          { id: "5", name: "David Bowie", albumCount: 22 },
-        ]);
+        if (!config || !config.serverUrl) {
+          console.error("Server configuration is missing");
+          setIsLoading(false);
+          return;
+        }
+
+        // Get the auth parameters from the store
+        const { generateAuthParams, getCoverArtUrl } = useMusicPlayerStore.getState();
+        const authParams = generateAuthParams();
+
+        // Make the API call to get all artists
+        const response = await fetch(
+          `${config.serverUrl}/rest/getArtists.view?${authParams.toString()}`
+        );
+
+        const data = await response.json();
+
+        if (data["subsonic-response"].status === "ok" && data["subsonic-response"].artists) {
+          // Subsonic organizes artists in indexes (by first letter)
+          const indexes = data["subsonic-response"].artists.index || [];
+          let allArtists: Artist[] = [];
+
+          // Flatten the indexes structure to get all artists
+          indexes.forEach((index: any) => {
+            if (index.artist && Array.isArray(index.artist)) {
+              const artistsInIndex = index.artist.map((artist: any) => ({
+                id: artist.id,
+                name: artist.name,
+                albumCount: artist.albumCount || 0,
+                imageUrl: artist.coverArt ? getCoverArtUrl(artist.coverArt) : undefined,
+              }));
+              allArtists = [...allArtists, ...artistsInIndex];
+            }
+          });
+
+          // Sort artists alphabetically by name
+          allArtists.sort((a, b) => a.name.localeCompare(b.name));
+
+          setArtists(allArtists);
+        } else {
+          throw new Error(
+            data["subsonic-response"].error?.message || "Failed to fetch artists"
+          );
+        }
       } catch (error) {
         console.error("Error fetching artists:", error);
       } finally {
@@ -50,14 +86,14 @@ export default function ArtistsScreen() {
     };
 
     fetchArtists();
-  }, []);
+  }, [config]);
 
   const renderArtistItem = ({ item }: { item: Artist }) => (
     <TouchableOpacity
       style={[styles.artistItem, { borderBottomColor: colors.border }]}
       onPress={() => {
         // Navigate to artist details screen
-        // This would be implemented in a future step
+        router.push(`/artist-details?id=${item.id}&name=${encodeURIComponent(item.name)}`);
       }}
     >
       <View style={styles.artistItemLeft}>
