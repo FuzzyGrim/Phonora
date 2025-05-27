@@ -11,6 +11,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Tag } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useShallow } from "zustand/react/shallow";
 
 interface Genre {
   id: string;
@@ -22,45 +23,84 @@ export default function GenresScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [genres, setGenres] = useState<Genre[]>([]);
-  const { config } = useMusicPlayerStore();
+  const [error, setError] = useState<string | null>(null);
+
+  // Access config and utility functions from the store using shallow equality
+  const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
+    config: state.config,
+    generateAuthParams: state.generateAuthParams,
+  })));
 
   useEffect(() => {
     // Fetch genres from the server
     const fetchGenres = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        // This is a placeholder. You'll need to implement the actual API call
-        // to fetch genres from your Subsonic server
-        
-        // Example data for UI development
-        setGenres([
-          { id: "1", name: "Rock", songCount: 256 },
-          { id: "2", name: "Pop", songCount: 189 },
-          { id: "3", name: "Jazz", songCount: 120 },
-          { id: "4", name: "Classical", songCount: 85 },
-          { id: "5", name: "Electronic", songCount: 168 },
-          { id: "6", name: "Hip Hop", songCount: 147 },
-          { id: "7", name: "Metal", songCount: 203 },
-          { id: "8", name: "Blues", songCount: 98 },
-          { id: "9", name: "Country", songCount: 132 },
-          { id: "10", name: "Folk", songCount: 76 },
-        ]);
+        // Return early if no config is available
+        if (!config || !config.serverUrl) {
+          setError("Server configuration is missing");
+          setIsLoading(false);
+          return;
+        }
+
+        // Generate authentication parameters
+        const authParams = generateAuthParams();
+
+        // Make API request to get genres
+        const response = await fetch(
+          `${config.serverUrl}/rest/getGenres.view?${authParams.toString()}`
+        );
+        const data = await response.json();
+
+        if (data["subsonic-response"].status === "ok") {
+          const genresData = data["subsonic-response"].genres?.genre || [];
+
+          const genresArray = Array.isArray(genresData) ? genresData : [genresData];
+
+          // Format and set genres with simplified logic
+          const formattedGenres = genresArray
+            .filter((genre: any) => genre && genre.value) // Filter out genres without a value
+            .map((genre: any) => ({
+              id: genre.value,
+              name: genre.value, // Use value for the name
+              songCount: genre.songCount || 0,
+            }));
+
+          // Sort alphabetically by name
+          formattedGenres.sort((a: Genre, b: Genre) =>
+            (a.name || "").localeCompare(b.name || "")
+          );
+
+          setGenres(formattedGenres);
+        } else {
+          throw new Error(
+            data["subsonic-response"].error?.message || "Failed to fetch genres"
+          );
+        }
       } catch (error) {
         console.error("Error fetching genres:", error);
+        setError(error instanceof Error ? error.message : "An error occurred");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchGenres();
-  }, []);
+  }, [config, generateAuthParams]);
 
   const renderGenreItem = ({ item }: { item: Genre }) => (
     <TouchableOpacity
       style={[styles.genreItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => {
-        // Navigate to genre details screen
-        // This would be implemented in a future step
+        // Navigate to genre songs screen
+        router.push({
+          pathname: "/(tabs)/genre-songs",
+          params: {
+            id: item.id,
+            name: item.name
+          }
+        });
       }}
     >
       <Tag size={20} color={colors.primary} style={styles.genreIcon} />
@@ -90,6 +130,12 @@ export default function GenresScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Loading genres...
+          </Text>
+        </View>
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
           </Text>
         </View>
       ) : genres.length === 0 ? (
@@ -147,6 +193,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontFamily: "Inter-Medium",
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: "Inter-Medium",
+    textAlign: "center",
+    padding: 20,
   },
   listContainer: {
     padding: 15,
