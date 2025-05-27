@@ -15,6 +15,7 @@ export default function TabLayout() {
   return (
     <View style={styles.container}>
       <Tabs
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
@@ -77,6 +78,12 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="album-details"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
+        <Tabs.Screen
+          name="playlist-details"
           options={{
             href: null, // This prevents it from being a root tab
           }}

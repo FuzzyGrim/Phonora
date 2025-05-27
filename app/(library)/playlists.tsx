@@ -6,41 +6,83 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { ChevronLeft, Disc } from "lucide-react-native";
+import { ChevronLeft, Disc, Music } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useShallow } from 'zustand/react/shallow';
 
 interface Playlist {
   id: string;
   name: string;
   songCount: number;
+  coverArt?: string;
+  owner?: string;
+  public?: boolean;
+  created?: string;
+  changed?: string;
 }
 
 export default function PlaylistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const { config } = useMusicPlayerStore();
+  const [error, setError] = useState<string | null>(null);
+  const { getCoverArtUrl } = useMusicPlayerStore();
+  const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
+    config: state.config,
+    generateAuthParams: state.generateAuthParams,
+  })));
 
   useEffect(() => {
     // Fetch playlists from the server
     const fetchPlaylists = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        // This is a placeholder. You'll need to implement the actual API call
-        // to fetch playlists from your Subsonic server
-        
-        // Example data for UI development
-        setPlaylists([
-          { id: "1", name: "Favorites", songCount: 12 },
-          { id: "2", name: "Recently Added", songCount: 25 },
-          { id: "3", name: "Rock", songCount: 42 },
-          { id: "4", name: "Relaxing", songCount: 18 },
-        ]);
+        // Return early if no config is available
+        if (!config || !config.serverUrl) {
+          setError("Server configuration is missing");
+          setIsLoading(false);
+          return;
+        }
+
+        // Generate authentication parameters
+        const authParams = generateAuthParams();
+
+        // Make API request to get playlists
+        const response = await fetch(
+          `${config.serverUrl}/rest/getPlaylists.view?${authParams.toString()}`
+        );
+        const data = await response.json();
+
+        if (data["subsonic-response"].status === "ok") {
+          // Extract playlists from the response
+          const playlistList = data["subsonic-response"].playlists?.playlist || [];
+
+          // Format and set playlists
+          const formattedPlaylists = playlistList.map((playlist: any) => ({
+            id: playlist.id,
+            name: playlist.name,
+            songCount: playlist.songCount || 0,
+            coverArt: playlist.coverArt,
+            owner: playlist.owner,
+            public: playlist.public,
+            created: playlist.created,
+            changed: playlist.changed
+          }));
+
+          setPlaylists(formattedPlaylists);
+        } else {
+          throw new Error(
+            data["subsonic-response"].error?.message || "Failed to fetch playlists"
+          );
+        }
       } catch (error) {
         console.error("Error fetching playlists:", error);
+        setError(error instanceof Error ? error.message : "Failed to fetch playlists");
       } finally {
         setIsLoading(false);
       }
@@ -54,13 +96,23 @@ export default function PlaylistsScreen() {
       style={[styles.playlistItem, { borderBottomColor: colors.border }]}
       onPress={() => {
         // Navigate to playlist details screen
-        // This would be implemented in a future step
+        router.push({
+          pathname: "/(tabs)/playlist-details",
+          params: { id: item.id, name: item.name }
+        });
       }}
     >
       <View style={styles.playlistItemLeft}>
-        <View style={[styles.playlistIcon, { backgroundColor: colors.surface }]}>
-          <Disc size={24} color={colors.primary} />
-        </View>
+        {item.coverArt ? (
+          <Image
+            source={{ uri: getCoverArtUrl(item.coverArt) }}
+            style={styles.playlistImage}
+          />
+        ) : (
+          <View style={[styles.playlistIcon, { backgroundColor: colors.surface }]}>
+            <Music size={24} color={colors.primary} />
+          </View>
+        )}
         <View style={styles.playlistDetails}>
           <Text style={[styles.playlistName, { color: colors.text }]}>
             {item.name}
@@ -68,6 +120,11 @@ export default function PlaylistsScreen() {
           <Text style={[styles.playlistCount, { color: colors.textSecondary }]}>
             {item.songCount} {item.songCount === 1 ? "song" : "songs"}
           </Text>
+          {item.owner && (
+            <Text style={[styles.playlistOwner, { color: colors.textSecondary }]}>
+              by {item.owner}
+            </Text>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -90,6 +147,12 @@ export default function PlaylistsScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Loading playlists...
+          </Text>
+        </View>
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
           </Text>
         </View>
       ) : playlists.length === 0 ? (
@@ -146,6 +209,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inter-Medium",
   },
+  errorText: {
+    fontSize: 16,
+    fontFamily: "Inter-Medium",
+    textAlign: "center",
+    padding: 20,
+  },
   listContainer: {
     padding: 20,
   },
@@ -167,6 +236,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  playlistImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+  },
   playlistDetails: {
     marginLeft: 15,
   },
@@ -178,5 +252,10 @@ const styles = StyleSheet.create({
   playlistCount: {
     fontSize: 14,
     fontFamily: "Inter-Regular",
+  },
+  playlistOwner: {
+    fontSize: 12,
+    fontFamily: "Inter-Regular",
+    marginTop: 2,
   },
 });
