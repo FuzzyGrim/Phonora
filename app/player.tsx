@@ -54,6 +54,8 @@ export default function PlayerScreen() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [position, setPosition] = useState(0);
+  const [isSliderBeingDragged, setIsSliderBeingDragged] = useState(false);
+  const seekingRef = useRef(false);
 
   // Get the appropriate list of songs to display
   const songsToDisplay = currentPlaylist?.songs || songs;
@@ -132,7 +134,7 @@ export default function PlayerScreen() {
   useEffect(() => {
     // Immediately get current position when component mounts
     const getInitialPosition = () => {
-      if (playback.player) {
+      if (playback.player && !isSliderBeingDragged && !seekingRef.current) {
         // Access the currentTime property directly
         setPosition(playback.player.currentTime);
       }
@@ -145,7 +147,7 @@ export default function PlayerScreen() {
 
     if (playback.isPlaying && playback.player) {
       interval = setInterval(() => {
-        if (playback.player) {
+        if (playback.player && !isSliderBeingDragged && !seekingRef.current) {
           // Access the currentTime property directly
           setPosition(playback.player.currentTime);
         }
@@ -155,7 +157,7 @@ export default function PlayerScreen() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [playback.isPlaying, playback.player]);
+  }, [playback.isPlaying, playback.player, isSliderBeingDragged]);
 
   const handlePlayPause = async () => {
     if (playback.isPlaying) {
@@ -206,7 +208,32 @@ export default function PlayerScreen() {
 
   const handleSliderChange = (value: number) => {
     setPosition(value);
-    seekToPosition(value * 1000); // Convert to milliseconds
+  };
+
+  const handleSliderSlidingStart = () => {
+    setIsSliderBeingDragged(true);
+  };
+
+  const handleSliderSlidingComplete = async (value: number) => {
+    console.log('Seeking to position:', value, 'seconds');
+    seekingRef.current = true;
+
+    try {
+      await seekToPosition(value); // Pass seconds directly
+
+      // Wait for the seek to complete and then update position from player
+      setTimeout(() => {
+        if (playback.player) {
+          setPosition(playback.player.currentTime);
+        }
+        seekingRef.current = false;
+        setIsSliderBeingDragged(false);
+      }, 300);
+    } catch (error) {
+      console.error('Error during slider seek:', error);
+      seekingRef.current = false;
+      setIsSliderBeingDragged(false);
+    }
   };
 
   type RenderItemProps = {
@@ -346,6 +373,8 @@ export default function PlayerScreen() {
             maximumValue={currentSong.duration}
             value={position}
             onValueChange={handleSliderChange}
+            onSlidingStart={handleSliderSlidingStart}
+            onSlidingComplete={handleSliderSlidingComplete}
             minimumTrackTintColor={colors.primary}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.primary}

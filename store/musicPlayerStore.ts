@@ -119,7 +119,7 @@ interface MusicPlayerState {
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
-  seekToPosition: (positionMillis: number) => Promise<void>;
+  seekToPosition: (positionSeconds: number) => Promise<void>;
   skipToNext: () => Promise<void>;
   skipToPrevious: () => Promise<void>;
   seekForward: () => Promise<void>;
@@ -1022,13 +1022,31 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   /**
    * Seek to a specific position in the current song
    */
-  seekToPosition: async (positionMillis: number) => {
+  seekToPosition: async (positionSeconds: number) => {
     const { player } = get().playback;
-    if (!player) return;
+    if (!player) {
+      console.log('No player available for seeking');
+      return;
+    }
 
     try {
-      // Convert milliseconds to seconds for expo-audio
-      await player.seekTo(positionMillis / 1000);
+      console.log('Current position before seek:', player.currentTime, 'seconds');
+      console.log('Attempting to seek to:', positionSeconds, 'seconds');
+      console.log('Song duration:', player.duration, 'seconds');
+      
+      // Ensure we don't seek beyond the song duration
+      const clampedPosition = Math.min(Math.max(positionSeconds, 0), player.duration || positionSeconds);
+      
+      await player.seekTo(clampedPosition);
+      
+      // Wait a bit and check the new position
+      setTimeout(() => {
+        if (player) {
+          console.log('Position after seek:', player.currentTime, 'seconds');
+        }
+      }, 200);
+      
+      console.log('Seek completed successfully');
     } catch (error) {
       console.error("Error seeking to position:", error);
     }
