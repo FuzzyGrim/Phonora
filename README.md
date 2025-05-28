@@ -1,50 +1,57 @@
-# Welcome to your Expo app 👋
+# Phonora 🎵
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern music streaming app for your personal music server. Stream your music library anywhere with offline support and a beautiful interface.
 
-## Get started
+## Features
 
-1. Install dependencies
+🎧 **Music Playback**
+
+- Stream from your Subsonic-compatible server
+- Background playback continues when minimized
+- Full playback controls with seek, repeat, and shuffle
+- Variable playback speed
+
+📱 **Beautiful Interface**
+
+- Clean, modern dark theme design
+- Browse by Albums, Artists, Genres, and Playlists
+- Search across your entire music library
+- Mini player for quick access
+
+💾 **Offline Listening**
+
+- Download songs for offline playback
+- Smart cache management with configurable size limits
+- Offline mode for airplane or low-data situations
+
+## Getting Started
+
+1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Start the app:
 
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. **Connect your music server** in Settings:
+   - Enter your server URL, username, and password
+   - Test the connection to verify it works
+   - Start browsing and streaming your music!
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Compatible Servers
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Works with Subsonic and compatible servers:
 
-## Get a fresh project
+- Subsonic
+- Navidrome
+- Airsonic
+- Airsonic-Advanced
 
-When you're ready, run:
+## License
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+GNU Affero General Public License v3.0.
