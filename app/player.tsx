@@ -130,27 +130,23 @@ export default function PlayerScreen() {
   // Update position for progress bar
   useEffect(() => {
     // Immediately get current position when component mounts
-    const getInitialPosition = async () => {
-      if (playback.sound) {
-        const status = await playback.sound.getStatusAsync();
-        if (status.isLoaded) {
-          setPosition(status.positionMillis / 1000);
-        }
+    const getInitialPosition = () => {
+      if (playback.player) {
+        // Access the currentTime property directly
+        setPosition(playback.player.currentTime);
       }
     };
 
     // Call it right away
     getInitialPosition();
 
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    if (playback.isPlaying && playback.sound) {
-      interval = setInterval(async () => {
-        if (playback.sound) {
-          const status = await playback.sound.getStatusAsync();
-          if (status.isLoaded) {
-            setPosition(status.positionMillis / 1000);
-          }
+    if (playback.isPlaying && playback.player) {
+      interval = setInterval(() => {
+        if (playback.player) {
+          // Access the currentTime property directly
+          setPosition(playback.player.currentTime);
         }
       }, 1000);
     }
@@ -158,7 +154,7 @@ export default function PlayerScreen() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [playback.isPlaying, playback.sound]);
+  }, [playback.isPlaying, playback.player]);
 
   const handlePlayPause = async () => {
     if (playback.isPlaying) {
