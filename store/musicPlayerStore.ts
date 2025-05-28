@@ -360,10 +360,6 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // Check if adding the new file would exceed the limit
       const hasSpace = (currentCacheSize + sizeInBytes) <= maxCacheSizeInBytes;
       
-      // Log cache usage info
-      const usagePercentage = ((currentCacheSize / maxCacheSizeInBytes) * 100).toFixed(1);
-      console.log(`Cache usage: ${(currentCacheSize / (1024 * 1024)).toFixed(2)}MB / ${userSettings.maxCacheSize.toFixed(2)}GB (${usagePercentage}%)`);
-      
       return hasSpace;
     } catch (error) {
       console.error("Error checking cache space:", error);
@@ -607,7 +603,6 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         );
 
         if (downloadResult.status === 200) {
-          console.log(`Song cached successfully: ${song.title}`);
           return filePath;
         } else {
           throw new Error(`HTTP Error: ${downloadResult.status}`);
@@ -631,16 +626,11 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     try {
       // If already cached, return the cached path
       if (await get().isFileCached(imageId, "jpg")) {
-        console.log(`Image already cached: ${songTitle}`);
         return get().getCachedFilePath(imageId, "jpg");
       }
     } catch (cacheCheckError) {
-      console.log(`Error checking if image is cached for ${songTitle}:`, cacheCheckError);
       // Continue with downloading even if there was an error checking the cache
     }
-
-    // Log that we're starting to download
-    console.log(`Starting background download: ${songTitle}`);
 
     // Ensure directory exists
     try {
@@ -1050,28 +1040,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   seekToPosition: async (positionSeconds: number) => {
     const { player } = get().playback;
     if (!player) {
-      console.log('No player available for seeking');
       return;
     }
 
     try {
-      console.log('Current position before seek:', player.currentTime, 'seconds');
-      console.log('Attempting to seek to:', positionSeconds, 'seconds');
-      console.log('Song duration:', player.duration, 'seconds');
-      
       // Ensure we don't seek beyond the song duration
       const clampedPosition = Math.min(Math.max(positionSeconds, 0), player.duration || positionSeconds);
       
       await player.seekTo(clampedPosition);
-      
-      // Wait a bit and check the new position
-      setTimeout(() => {
-        if (player) {
-          console.log('Position after seek:', player.currentTime, 'seconds');
-        }
-      }, 200);
-      
-      console.log('Seek completed successfully');
     } catch (error) {
       console.error("Error seeking to position:", error);
     }
