@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import md5 from "md5";
-import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import { createAudioPlayer, setAudioModeAsync, AudioStatus } from "expo-audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 
@@ -830,6 +830,8 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       if (currentPlayer) {
         // First pause the player to immediately stop the sound
         currentPlayer.pause();
+        // Make sure to remove any existing event listeners
+        currentPlayer.removeAllListeners('playbackStatusUpdate');
         // Then remove it to free up resources
         currentPlayer.remove();
       }
@@ -910,6 +912,25 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         playsInSilentMode: true,
         shouldPlayInBackground: true,
       });
+
+      // Set up a listener for playback status updates
+      const handlePlaybackStatusUpdate = (status: AudioStatus) => {
+        // When the song reaches the end (status.didJustFinish will be true)
+        if (status.didJustFinish) {
+          console.log(`Song finished: ${song.title}`);
+          // Check currentPlaylist state before calling skipToNext
+          const { currentPlaylist } = get();
+          console.log("currentPlaylist state:", { 
+            hasPlaylist: !!currentPlaylist,
+            playlistLength: currentPlaylist?.songs?.length || 0 
+          });
+          // Auto-play next song
+          get().skipToNext();
+        }
+      };
+
+      // Add the event listener to the player
+      player.addListener('playbackStatusUpdate', handlePlaybackStatusUpdate);
 
       // Play the song
       player.play();
@@ -1017,40 +1038,103 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { currentPlaylist, playback } = get();
-    if (!playback.currentSong || !currentPlaylist || currentPlaylist.songs.length === 0) return;
+    const { currentPlaylist, playback, songs } = get();
+    console.log("skipToNext called", { 
+      hasSong: !!playback.currentSong, 
+      hasPlaylist: !!currentPlaylist,
+      playlistLength: currentPlaylist?.songs?.length || 0,
+      globalSongsLength: songs?.length || 0
+    });
+    
+    // Check if we have a current song
+    if (!playback.currentSong) {
+      console.log("skipToNext returning early: No current song");
+      return;
+    }
 
-    // Find the index of the current song
-    const currentIndex = currentPlaylist.songs.findIndex(
-      (song) => song.id === playback.currentSong?.id,
-    );
+    // If we have a playlist, use it
+    if (currentPlaylist && currentPlaylist.songs.length > 0) {
+      // Find the index of the current song in the playlist
+      const currentIndex = currentPlaylist.songs.findIndex(
+        (song) => song.id === playback.currentSong?.id,
+      );
 
-    // Return if we're at the end of the playlist or song not found
-    if (currentIndex === -1 || currentIndex === currentPlaylist.songs.length - 1) return;
+      // Return if we're at the end of the playlist or song not found
+      if (currentIndex === -1 || currentIndex === currentPlaylist.songs.length - 1) {
+        console.log("skipToNext returning: At end of playlist or song not found in playlist");
+        return;
+      }
 
-    // Play the next song
-    const nextSong = currentPlaylist.songs[currentIndex + 1];
-    await get().playSong(nextSong);
+      // Play the next song from the playlist
+      const nextSong = currentPlaylist.songs[currentIndex + 1];
+      console.log(`Playing next song from playlist: ${nextSong.title}`);
+      await get().playSong(nextSong);
+    } 
+    // No playlist - fallback to global songs list
+    else if (songs && songs.length > 0) {
+      // Find the index of the current song in the global song list
+      const currentIndex = songs.findIndex(
+        (song) => song.id === playback.currentSong?.id,
+      );
+
+      // Return if we're at the end of the songs list or song not found
+      if (currentIndex === -1 || currentIndex === songs.length - 1) {
+        console.log("skipToNext returning: At end of global songs list or song not found");
+        return;
+      }
+
+      // Play the next song from the global songs list
+      const nextSong = songs[currentIndex + 1];
+      console.log(`Playing next song from global songs list: ${nextSong.title}`);
+      await get().playSong(nextSong);
+    } else {
+      console.log("skipToNext returning: No playlist or global songs available");
+    }
   },
 
   /**
    * Skip to the previous song in the playlist
    */
   skipToPrevious: async () => {
-    const { currentPlaylist, playback } = get();
-    if (!playback.currentSong || !currentPlaylist || currentPlaylist.songs.length === 0) return;
+    const { currentPlaylist, playback, songs } = get();
+    
+    // Check if we have a current song
+    if (!playback.currentSong) {
+      return;
+    }
 
-    // Find the index of the current song
-    const currentIndex = currentPlaylist.songs.findIndex(
-      (song) => song.id === playback.currentSong?.id,
-    );
+    // If we have a playlist, use it
+    if (currentPlaylist && currentPlaylist.songs.length > 0) {
+      // Find the index of the current song in the playlist
+      const currentIndex = currentPlaylist.songs.findIndex(
+        (song) => song.id === playback.currentSong?.id,
+      );
 
-    // Return if we're at the beginning of the playlist or song not found
-    if (currentIndex === -1 || currentIndex === 0) return;
+      // Return if we're at the beginning of the playlist or song not found
+      if (currentIndex === -1 || currentIndex === 0) {
+        return;
+      }
 
-    // Play the previous song
-    const previousSong = currentPlaylist.songs[currentIndex - 1];
-    await get().playSong(previousSong);
+      // Play the previous song from the playlist
+      const previousSong = currentPlaylist.songs[currentIndex - 1];
+      await get().playSong(previousSong);
+    } 
+    // No playlist - fallback to global songs list
+    else if (songs && songs.length > 0) {
+      // Find the index of the current song in the global song list
+      const currentIndex = songs.findIndex(
+        (song) => song.id === playback.currentSong?.id,
+      );
+
+      // Return if we're at the beginning of the songs list or song not found
+      if (currentIndex === -1 || currentIndex === 0) {
+        return;
+      }
+
+      // Play the previous song from the global songs list
+      const previousSong = songs[currentIndex - 1];
+      await get().playSong(previousSong);
+    }
   },
 
   /**

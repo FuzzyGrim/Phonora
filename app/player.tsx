@@ -45,6 +45,7 @@ export default function PlayerScreen() {
     seekBackward,
     setPlaybackRate,
     playSong,
+    playSongFromSource,
     seekToPosition,
     currentPlaylist,
   } = useMusicPlayerStore();
@@ -199,7 +200,8 @@ export default function PlayerScreen() {
   };
 
   const handleSongPress = (song: Song) => {
-    playSong(song);
+    // Use the songsToDisplay as the playlist source
+    playSongFromSource(song, 'library', songsToDisplay);
   };
 
   const handleSliderChange = (value: number) => {

@@ -82,7 +82,9 @@ export default function SearchScreen() {
       if (searchSongs.length > 0) {
         playSongFromSource(song, 'search', searchSongs);
       } else {
-        playSong(song);
+        // If no search songs, use global songs as fallback
+        const { songs } = useMusicPlayerStore.getState();
+        playSongFromSource(song, 'library', songs);
       }
     }
   };

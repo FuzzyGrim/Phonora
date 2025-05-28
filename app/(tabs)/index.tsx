@@ -31,6 +31,7 @@ export default function HomeScreen() {
     pauseSong,
     resumeSong,
     playback,
+    playSongFromSource,
   } = useMusicPlayerStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -48,7 +49,8 @@ export default function HomeScreen() {
         await resumeSong();
       }
     } else {
-      await playSong(song);
+      // Use playSongFromSource instead to set up the playlist properly
+      await playSongFromSource(song, 'library', songs);
     }
   };
 
