@@ -58,7 +58,18 @@ export default function PlayerScreen() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [position, setPosition] = useState(0);
   const [isSliderBeingDragged, setIsSliderBeingDragged] = useState(false);
+  const [localIsShuffle, setLocalIsShuffle] = useState(isShuffle);
+  const [localRepeatMode, setLocalRepeatMode] = useState(repeatMode);
   const seekingRef = useRef(false);
+
+  // Sync local state with store state
+  useEffect(() => {
+    setLocalIsShuffle(isShuffle);
+  }, [isShuffle]);
+
+  useEffect(() => {
+    setLocalRepeatMode(repeatMode);
+  }, [repeatMode]);
 
   // Get the appropriate list of songs to display
   const songsToDisplay = currentPlaylist?.songs || songs;
@@ -161,6 +172,43 @@ export default function PlayerScreen() {
       if (interval) clearInterval(interval);
     };
   }, [playback.isPlaying, playback.player, isSliderBeingDragged]);
+
+  const handleToggleShuffle = () => {
+    const newIsShuffle = !localIsShuffle;
+    // Immediately update local state for instant UI feedback
+    setLocalIsShuffle(newIsShuffle);
+    // If enabling shuffle, disable repeat
+    if (newIsShuffle) {
+      setLocalRepeatMode('off');
+    }
+    // Update store state
+    toggleShuffle();
+  };
+
+  const handleToggleRepeat = () => {
+    // Immediately update local state for instant UI feedback
+    let newRepeatMode: 'off' | 'one' | 'all';
+    switch (localRepeatMode) {
+      case 'off':
+        newRepeatMode = 'all';
+        break;
+      case 'all':
+        newRepeatMode = 'one';
+        break;
+      case 'one':
+        newRepeatMode = 'off';
+        break;
+      default:
+        newRepeatMode = 'off';
+    }
+    setLocalRepeatMode(newRepeatMode);
+    // If enabling repeat, disable shuffle
+    if (newRepeatMode !== 'off') {
+      setLocalIsShuffle(false);
+    }
+    // Update store state
+    toggleRepeat();
+  };
 
   const handlePlayPause = async () => {
     if (playback.isPlaying) {
@@ -386,12 +434,12 @@ export default function PlayerScreen() {
 
         <View style={styles.mainControls}>
           <TouchableOpacity
-            onPress={toggleShuffle}
+            onPress={handleToggleShuffle}
             style={styles.controlButton}
           >
             <Shuffle
               size={24}
-              color={isShuffle ? colors.primary : colors.textSecondary}
+              color={localIsShuffle ? colors.primary : colors.textSecondary}
             />
           </TouchableOpacity>
 
@@ -434,8 +482,8 @@ export default function PlayerScreen() {
             <SkipForward size={28} color={colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={toggleRepeat} style={styles.controlButton}>
-            {repeatMode === 'one' ? (
+          <TouchableOpacity onPress={handleToggleRepeat} style={styles.controlButton}>
+            {localRepeatMode === 'one' ? (
               <Repeat1
                 size={24}
                 color={colors.primary}
@@ -443,7 +491,7 @@ export default function PlayerScreen() {
             ) : (
               <Repeat
                 size={24}
-                color={repeatMode === 'all' ? colors.primary : colors.textSecondary}
+                color={localRepeatMode === 'all' ? colors.primary : colors.textSecondary}
               />
             )}
           </TouchableOpacity>
