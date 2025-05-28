@@ -12,7 +12,23 @@
     "lint": "expo lint"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/__tests__/setup.ts"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.{js,ts,tsx}"
+    ],
+    "collectCoverageFrom": [
+      "store/**/*.{ts,tsx}",
+      "!store/**/*.d.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",

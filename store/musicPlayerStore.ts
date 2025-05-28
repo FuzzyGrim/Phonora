@@ -88,7 +88,7 @@ interface PlaybackState {
 /**
  * User preferences for the application
  */
-interface UserSettings {
+export interface UserSettings {
   offlineMode: boolean;
   maxCacheSize: number; // in GB
 }
