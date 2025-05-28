@@ -14,6 +14,18 @@ let cacheCleanupInProgress = false;
 let recentlyDeletedFiles: Set<string> = new Set();
 
 /**
+ * Utility function to shuffle an array using Fisher-Yates algorithm
+ */
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+/**
  * Represents a song in the Subsonic API
  */
 export interface Song {
@@ -99,6 +111,9 @@ interface MusicPlayerState {
     source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist';
     songs: Song[];
   } | null;
+  isRepeat: boolean;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'one' | 'all';
 
   // Authentication actions
   setConfig: (config: SubsonicConfig) => void;
@@ -125,6 +140,11 @@ interface MusicPlayerState {
   seekForward: () => Promise<void>;
   seekBackward: () => Promise<void>;
   setPlaybackRate: (speed: number) => Promise<void>;
+
+  // Repeat and Shuffle controls
+  toggleRepeat: () => void;
+  toggleShuffle: () => void;
+  setRepeatMode: (mode: 'off' | 'one' | 'all') => void;
 
   // Cache management
   clearCache: () => Promise<void>;
@@ -165,6 +185,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   error: null,
   searchResults: null,
   currentPlaylist: null,
+  isRepeat: false,
+  isShuffle: false,
+  repeatMode: 'off',
   playback: {
     isPlaying: false,
     currentSong: null,
@@ -919,12 +942,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         if (status.didJustFinish) {
           console.log(`Song finished: ${song.title}`);
           // Check currentPlaylist state before calling skipToNext
-          const { currentPlaylist } = get();
-          console.log("currentPlaylist state:", { 
+          const { currentPlaylist, repeatMode, isShuffle } = get();
+          console.log("Song finished - currentPlaylist state:", { 
             hasPlaylist: !!currentPlaylist,
-            playlistLength: currentPlaylist?.songs?.length || 0 
+            playlistLength: currentPlaylist?.songs?.length || 0,
+            repeatMode,
+            isShuffle
           });
-          // Auto-play next song
+          // Auto-play next song (handles repeat and shuffle logic)
           get().skipToNext();
         }
       };
@@ -1056,12 +1081,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { currentPlaylist, playback, songs } = get();
+    const { currentPlaylist, playback, songs, repeatMode, isShuffle } = get();
     console.log("skipToNext called", { 
       hasSong: !!playback.currentSong, 
       hasPlaylist: !!currentPlaylist,
       playlistLength: currentPlaylist?.songs?.length || 0,
-      globalSongsLength: songs?.length || 0
+      globalSongsLength: songs?.length || 0,
+      repeatMode,
+      isShuffle
     });
     
     // Check if we have a current song
@@ -1070,43 +1097,57 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       return;
     }
 
-    // If we have a playlist, use it
-    if (currentPlaylist && currentPlaylist.songs.length > 0) {
-      // Find the index of the current song in the playlist
-      const currentIndex = currentPlaylist.songs.findIndex(
-        (song) => song.id === playback.currentSong?.id,
-      );
+    // Handle repeat one mode - just replay the same song
+    if (repeatMode === 'one') {
+      console.log("Repeat one mode: replaying current song");
+      await get().playSong(playback.currentSong);
+      return;
+    }
 
-      // Return if we're at the end of the playlist or song not found
-      if (currentIndex === -1 || currentIndex === currentPlaylist.songs.length - 1) {
-        console.log("skipToNext returning: At end of playlist or song not found in playlist");
-        return;
+    // Get the songs list to work with
+    const songsToUse = currentPlaylist?.songs || songs;
+    if (!songsToUse || songsToUse.length === 0) {
+      console.log("skipToNext returning: No songs available");
+      return;
+    }
+
+    // Find the index of the current song
+    const currentIndex = songsToUse.findIndex(
+      (song) => song.id === playback.currentSong?.id,
+    );
+
+    if (currentIndex === -1) {
+      console.log("skipToNext returning: Current song not found in list");
+      return;
+    }
+
+    let nextSong: Song | null = null;
+
+    if (isShuffle) {
+      // In shuffle mode, pick a random song (excluding current song)
+      const availableSongs = songsToUse.filter((_, index) => index !== currentIndex);
+      if (availableSongs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableSongs.length);
+        nextSong = availableSongs[randomIndex];
+        console.log(`Playing random song: ${nextSong.title}`);
       }
-
-      // Play the next song from the playlist
-      const nextSong = currentPlaylist.songs[currentIndex + 1];
-      console.log(`Playing next song from playlist: ${nextSong.title}`);
-      await get().playSong(nextSong);
-    } 
-    // No playlist - fallback to global songs list
-    else if (songs && songs.length > 0) {
-      // Find the index of the current song in the global song list
-      const currentIndex = songs.findIndex(
-        (song) => song.id === playback.currentSong?.id,
-      );
-
-      // Return if we're at the end of the songs list or song not found
-      if (currentIndex === -1 || currentIndex === songs.length - 1) {
-        console.log("skipToNext returning: At end of global songs list or song not found");
-        return;
+    } else {
+      // Normal mode: play next song in order
+      if (currentIndex < songsToUse.length - 1) {
+        nextSong = songsToUse[currentIndex + 1];
+        console.log(`Playing next song in order: ${nextSong.title}`);
+      } else if (repeatMode === 'all') {
+        // If we're at the end and repeat all is on, go back to the beginning
+        nextSong = songsToUse[0];
+        console.log(`Repeating playlist, playing first song: ${nextSong.title}`);
       }
+    }
 
-      // Play the next song from the global songs list
-      const nextSong = songs[currentIndex + 1];
-      console.log(`Playing next song from global songs list: ${nextSong.title}`);
+    // Play the next song if we found one
+    if (nextSong) {
       await get().playSong(nextSong);
     } else {
-      console.log("skipToNext returning: No playlist or global songs available");
+      console.log("skipToNext: No next song to play");
     }
   },
 
@@ -1114,43 +1155,56 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Skip to the previous song in the playlist
    */
   skipToPrevious: async () => {
-    const { currentPlaylist, playback, songs } = get();
+    const { currentPlaylist, playback, songs, repeatMode, isShuffle } = get();
     
     // Check if we have a current song
     if (!playback.currentSong) {
       return;
     }
 
-    // If we have a playlist, use it
-    if (currentPlaylist && currentPlaylist.songs.length > 0) {
-      // Find the index of the current song in the playlist
-      const currentIndex = currentPlaylist.songs.findIndex(
-        (song) => song.id === playback.currentSong?.id,
-      );
+    // Handle repeat one mode - just replay the same song
+    if (repeatMode === 'one') {
+      console.log("Repeat one mode: replaying current song");
+      await get().playSong(playback.currentSong);
+      return;
+    }
 
-      // Return if we're at the beginning of the playlist or song not found
-      if (currentIndex === -1 || currentIndex === 0) {
-        return;
+    // Get the songs list to work with
+    const songsToUse = currentPlaylist?.songs || songs;
+    if (!songsToUse || songsToUse.length === 0) {
+      return;
+    }
+
+    // Find the index of the current song
+    const currentIndex = songsToUse.findIndex(
+      (song) => song.id === playback.currentSong?.id,
+    );
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    let previousSong: Song | null = null;
+
+    if (isShuffle) {
+      // In shuffle mode, pick a random song (excluding current song)
+      const availableSongs = songsToUse.filter((_, index) => index !== currentIndex);
+      if (availableSongs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableSongs.length);
+        previousSong = availableSongs[randomIndex];
       }
-
-      // Play the previous song from the playlist
-      const previousSong = currentPlaylist.songs[currentIndex - 1];
-      await get().playSong(previousSong);
-    } 
-    // No playlist - fallback to global songs list
-    else if (songs && songs.length > 0) {
-      // Find the index of the current song in the global song list
-      const currentIndex = songs.findIndex(
-        (song) => song.id === playback.currentSong?.id,
-      );
-
-      // Return if we're at the beginning of the songs list or song not found
-      if (currentIndex === -1 || currentIndex === 0) {
-        return;
+    } else {
+      // Normal mode: play previous song in order
+      if (currentIndex > 0) {
+        previousSong = songsToUse[currentIndex - 1];
+      } else if (repeatMode === 'all') {
+        // If we're at the beginning and repeat all is on, go to the last song
+        previousSong = songsToUse[songsToUse.length - 1];
       }
+    }
 
-      // Play the previous song from the global songs list
-      const previousSong = songs[currentIndex - 1];
+    // Play the previous song if we found one
+    if (previousSong) {
       await get().playSong(previousSong);
     }
   },
@@ -1196,5 +1250,63 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
     // Use the new setPlaybackRate method with pitch correction
     player.setPlaybackRate(speed, 'medium');
+  },
+
+  /**
+   * Toggle repeat mode: off -> all -> one -> off
+   */
+  toggleRepeat: () => {
+    set((state) => {
+      let newRepeatMode: 'off' | 'one' | 'all';
+      let newIsRepeat: boolean;
+      
+      switch (state.repeatMode) {
+        case 'off':
+          newRepeatMode = 'all';
+          newIsRepeat = true;
+          break;
+        case 'all':
+          newRepeatMode = 'one';
+          newIsRepeat = true;
+          break;
+        case 'one':
+          newRepeatMode = 'off';
+          newIsRepeat = false;
+          break;
+        default:
+          newRepeatMode = 'off';
+          newIsRepeat = false;
+      }
+      
+      return {
+        repeatMode: newRepeatMode,
+        isRepeat: newIsRepeat,
+        // If enabling repeat, disable shuffle
+        isShuffle: newIsRepeat ? false : state.isShuffle,
+      };
+    });
+  },
+
+  /**
+   * Set repeat mode directly
+   */
+  setRepeatMode: (mode: 'off' | 'one' | 'all') => {
+    set((state) => ({
+      repeatMode: mode,
+      isRepeat: mode !== 'off',
+      // If enabling repeat, disable shuffle
+      isShuffle: mode !== 'off' ? false : state.isShuffle,
+    }));
+  },
+
+  /**
+   * Toggle shuffle mode
+   */
+  toggleShuffle: () => {
+    set((state) => ({
+      isShuffle: !state.isShuffle,
+      // If enabling shuffle, disable repeat
+      isRepeat: !state.isShuffle ? false : state.isRepeat,
+    }));
   },
 }));

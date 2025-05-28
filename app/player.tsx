@@ -17,6 +17,7 @@ import {
   SkipBack,
   ChevronDown,
   Repeat,
+  Repeat1,
   Shuffle,
   Rewind,
   FastForward,
@@ -48,10 +49,12 @@ export default function PlayerScreen() {
     playSongFromSource,
     seekToPosition,
     currentPlaylist,
+    repeatMode,
+    isShuffle,
+    toggleRepeat,
+    toggleShuffle,
   } = useMusicPlayerStore();
   const router = useRouter();
-  const [isRepeat, setIsRepeat] = useState(false);
-  const [isShuffle, setIsShuffle] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [position, setPosition] = useState(0);
   const [isSliderBeingDragged, setIsSliderBeingDragged] = useState(false);
@@ -181,14 +184,6 @@ export default function PlayerScreen() {
 
   const handleSeekForward = () => {
     seekForward();
-  };
-
-  const toggleRepeat = () => {
-    setIsRepeat(!isRepeat);
-  };
-
-  const toggleShuffle = () => {
-    setIsShuffle(!isShuffle);
   };
 
   const changePlaybackSpeed = () => {
@@ -440,10 +435,17 @@ export default function PlayerScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={toggleRepeat} style={styles.controlButton}>
-            <Repeat
-              size={24}
-              color={isRepeat ? colors.primary : colors.textSecondary}
-            />
+            {repeatMode === 'one' ? (
+              <Repeat1
+                size={24}
+                color={colors.primary}
+              />
+            ) : (
+              <Repeat
+                size={24}
+                color={repeatMode === 'all' ? colors.primary : colors.textSecondary}
+              />
+            )}
           </TouchableOpacity>
         </View>
 
