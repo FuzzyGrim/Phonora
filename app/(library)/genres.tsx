@@ -26,10 +26,12 @@ export default function GenresScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Access config and utility functions from the store using shallow equality
-  const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
-    config: state.config,
-    generateAuthParams: state.generateAuthParams,
-  })));
+  const { config, generateAuthParams } = useMusicPlayerStore(
+    useShallow((state) => ({
+      config: state.config,
+      generateAuthParams: state.generateAuthParams,
+    })),
+  );
 
   useEffect(() => {
     // Fetch genres from the server
@@ -49,14 +51,16 @@ export default function GenresScreen() {
 
         // Make API request to get genres
         const response = await fetch(
-          `${config.serverUrl}/rest/getGenres.view?${authParams.toString()}`
+          `${config.serverUrl}/rest/getGenres.view?${authParams.toString()}`,
         );
         const data = await response.json();
 
         if (data["subsonic-response"].status === "ok") {
           const genresData = data["subsonic-response"].genres?.genre || [];
 
-          const genresArray = Array.isArray(genresData) ? genresData : [genresData];
+          const genresArray = Array.isArray(genresData)
+            ? genresData
+            : [genresData];
 
           // Format and set genres with simplified logic
           const formattedGenres = genresArray
@@ -69,13 +73,14 @@ export default function GenresScreen() {
 
           // Sort alphabetically by name
           formattedGenres.sort((a: Genre, b: Genre) =>
-            (a.name || "").localeCompare(b.name || "")
+            (a.name || "").localeCompare(b.name || ""),
           );
 
           setGenres(formattedGenres);
         } else {
           throw new Error(
-            data["subsonic-response"].error?.message || "Failed to fetch genres"
+            data["subsonic-response"].error?.message ||
+              "Failed to fetch genres",
           );
         }
       } catch (error) {
@@ -91,15 +96,18 @@ export default function GenresScreen() {
 
   const renderGenreItem = ({ item }: { item: Genre }) => (
     <TouchableOpacity
-      style={[styles.genreItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[
+        styles.genreItem,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
       onPress={() => {
         // Navigate to genre songs screen
         router.push({
           pathname: "/(tabs)/genre-songs",
           params: {
             id: item.id,
-            name: item.name
-          }
+            name: item.name,
+          },
         });
       }}
     >
@@ -207,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   genreItem: {
-    width: '48%',
+    width: "48%",
     padding: 15,
     borderRadius: 12,
     marginBottom: 15,

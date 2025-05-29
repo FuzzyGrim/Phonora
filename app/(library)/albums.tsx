@@ -12,7 +12,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Disc } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { useShallow } from 'zustand/react/shallow';
+import { useShallow } from "zustand/react/shallow";
 
 interface Album {
   id: string;
@@ -28,10 +28,12 @@ export default function AlbumsScreen() {
   const [albums, setAlbums] = useState<Album[]>([]);
 
   // Access config from the store using shallow equality
-  const { config, getCoverArtUrl } = useMusicPlayerStore(useShallow((state) => ({
-    config: state.config,
-    getCoverArtUrl: state.getCoverArtUrl
-  })));
+  const { config, getCoverArtUrl } = useMusicPlayerStore(
+    useShallow((state) => ({
+      config: state.config,
+      getCoverArtUrl: state.getCoverArtUrl,
+    })),
+  );
 
   useEffect(() => {
     // Fetch albums from the server
@@ -50,12 +52,15 @@ export default function AlbumsScreen() {
 
         // Make the API call to get all albums
         const response = await fetch(
-          `${config.serverUrl}/rest/getAlbumList2.view?type=alphabeticalByName&size=500&${authParams.toString()}`
+          `${config.serverUrl}/rest/getAlbumList2.view?type=alphabeticalByName&size=500&${authParams.toString()}`,
         );
 
         const data = await response.json();
 
-        if (data["subsonic-response"].status === "ok" && data["subsonic-response"].albumList2) {
+        if (
+          data["subsonic-response"].status === "ok" &&
+          data["subsonic-response"].albumList2
+        ) {
           const albumsData = data["subsonic-response"].albumList2.album || [];
 
           // Map the API response to our Album interface
@@ -64,13 +69,16 @@ export default function AlbumsScreen() {
             name: album.name,
             artist: album.artist,
             songCount: album.songCount,
-            imageUrl: album.coverArt ? getCoverArtUrl(album.coverArt) : undefined,
+            imageUrl: album.coverArt
+              ? getCoverArtUrl(album.coverArt)
+              : undefined,
           }));
 
           setAlbums(formattedAlbums);
         } else {
           throw new Error(
-            data["subsonic-response"].error?.message || "Failed to fetch albums"
+            data["subsonic-response"].error?.message ||
+              "Failed to fetch albums",
           );
         }
       } catch (error) {
@@ -90,7 +98,7 @@ export default function AlbumsScreen() {
         // Navigate to album details screen with the album ID
         router.push({
           pathname: "/(tabs)/album-details",
-          params: { id: item.id }
+          params: { id: item.id },
         });
       }}
     >
@@ -98,7 +106,12 @@ export default function AlbumsScreen() {
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={styles.albumImage} />
         ) : (
-          <View style={[styles.albumPlaceholder, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.albumPlaceholder,
+              { backgroundColor: colors.surface },
+            ]}
+          >
             <Disc size={24} color={colors.primary} />
           </View>
         )}
@@ -200,24 +213,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   albumItem: {
-    width: '48%',
+    width: "48%",
     marginBottom: 20,
   },
   albumImageContainer: {
     aspectRatio: 1,
     marginBottom: 8,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   albumImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   albumPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   albumName: {
     fontSize: 14,

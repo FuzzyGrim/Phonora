@@ -94,7 +94,6 @@ export default function TabLayout() {
             href: null, // This prevents it from being a root tab
           }}
         />
-
       </Tabs>
     </View>
   );

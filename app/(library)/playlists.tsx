@@ -9,10 +9,10 @@ import {
   Image,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { ChevronLeft, Disc, Music } from "lucide-react-native";
+import { ChevronLeft, Music } from "lucide-react-native";
 import { router } from "expo-router";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { useShallow } from 'zustand/react/shallow';
+import { useShallow } from "zustand/react/shallow";
 
 interface Playlist {
   id: string;
@@ -31,10 +31,12 @@ export default function PlaylistsScreen() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { getCoverArtUrl } = useMusicPlayerStore();
-  const { config, generateAuthParams } = useMusicPlayerStore(useShallow((state) => ({
-    config: state.config,
-    generateAuthParams: state.generateAuthParams,
-  })));
+  const { config, generateAuthParams } = useMusicPlayerStore(
+    useShallow((state) => ({
+      config: state.config,
+      generateAuthParams: state.generateAuthParams,
+    })),
+  );
 
   useEffect(() => {
     // Fetch playlists from the server
@@ -54,13 +56,14 @@ export default function PlaylistsScreen() {
 
         // Make API request to get playlists
         const response = await fetch(
-          `${config.serverUrl}/rest/getPlaylists.view?${authParams.toString()}`
+          `${config.serverUrl}/rest/getPlaylists.view?${authParams.toString()}`,
         );
         const data = await response.json();
 
         if (data["subsonic-response"].status === "ok") {
           // Extract playlists from the response
-          const playlistList = data["subsonic-response"].playlists?.playlist || [];
+          const playlistList =
+            data["subsonic-response"].playlists?.playlist || [];
 
           // Format and set playlists
           const formattedPlaylists = playlistList.map((playlist: any) => ({
@@ -71,25 +74,28 @@ export default function PlaylistsScreen() {
             owner: playlist.owner,
             public: playlist.public,
             created: playlist.created,
-            changed: playlist.changed
+            changed: playlist.changed,
           }));
 
           setPlaylists(formattedPlaylists);
         } else {
           throw new Error(
-            data["subsonic-response"].error?.message || "Failed to fetch playlists"
+            data["subsonic-response"].error?.message ||
+            "Failed to fetch playlists",
           );
         }
       } catch (error) {
         console.error("Error fetching playlists:", error);
-        setError(error instanceof Error ? error.message : "Failed to fetch playlists");
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch playlists",
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPlaylists();
-  }, []);
+  }, [config, generateAuthParams]);
 
   const renderPlaylistItem = ({ item }: { item: Playlist }) => (
     <TouchableOpacity
@@ -98,7 +104,7 @@ export default function PlaylistsScreen() {
         // Navigate to playlist details screen
         router.push({
           pathname: "/(tabs)/playlist-details",
-          params: { id: item.id, name: item.name }
+          params: { id: item.id, name: item.name },
         });
       }}
     >
@@ -109,7 +115,9 @@ export default function PlaylistsScreen() {
             style={styles.playlistImage}
           />
         ) : (
-          <View style={[styles.playlistIcon, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.playlistIcon, { backgroundColor: colors.surface }]}
+          >
             <Music size={24} color={colors.primary} />
           </View>
         )}
@@ -121,7 +129,9 @@ export default function PlaylistsScreen() {
             {item.songCount} {item.songCount === 1 ? "song" : "songs"}
           </Text>
           {item.owner && (
-            <Text style={[styles.playlistOwner, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.playlistOwner, { color: colors.textSecondary }]}
+            >
               by {item.owner}
             </Text>
           )}

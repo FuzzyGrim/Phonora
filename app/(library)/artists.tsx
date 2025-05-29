@@ -25,9 +25,11 @@ export default function ArtistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const { config } = useMusicPlayerStore(useShallow((state) => ({
-    config: state.config,
-  })));
+  const { config } = useMusicPlayerStore(
+    useShallow((state) => ({
+      config: state.config,
+    })),
+  );
 
   useEffect(() => {
     // Fetch artists from the server
@@ -41,17 +43,21 @@ export default function ArtistsScreen() {
         }
 
         // Get the auth parameters from the store
-        const { generateAuthParams, getCoverArtUrl } = useMusicPlayerStore.getState();
+        const { generateAuthParams, getCoverArtUrl } =
+          useMusicPlayerStore.getState();
         const authParams = generateAuthParams();
 
         // Make the API call to get all artists
         const response = await fetch(
-          `${config.serverUrl}/rest/getArtists.view?${authParams.toString()}`
+          `${config.serverUrl}/rest/getArtists.view?${authParams.toString()}`,
         );
 
         const data = await response.json();
 
-        if (data["subsonic-response"].status === "ok" && data["subsonic-response"].artists) {
+        if (
+          data["subsonic-response"].status === "ok" &&
+          data["subsonic-response"].artists
+        ) {
           // Subsonic organizes artists in indexes (by first letter)
           const indexes = data["subsonic-response"].artists.index || [];
           let allArtists: Artist[] = [];
@@ -63,7 +69,9 @@ export default function ArtistsScreen() {
                 id: artist.id,
                 name: artist.name,
                 albumCount: artist.albumCount || 0,
-                imageUrl: artist.coverArt ? getCoverArtUrl(artist.coverArt) : undefined,
+                imageUrl: artist.coverArt
+                  ? getCoverArtUrl(artist.coverArt)
+                  : undefined,
               }));
               allArtists = [...allArtists, ...artistsInIndex];
             }
@@ -75,7 +83,8 @@ export default function ArtistsScreen() {
           setArtists(allArtists);
         } else {
           throw new Error(
-            data["subsonic-response"].error?.message || "Failed to fetch artists"
+            data["subsonic-response"].error?.message ||
+              "Failed to fetch artists",
           );
         }
       } catch (error) {
@@ -93,14 +102,18 @@ export default function ArtistsScreen() {
       style={[styles.artistItem, { borderBottomColor: colors.border }]}
       onPress={() => {
         // Navigate to artist details screen
-        router.push(`/artist-details?id=${item.id}&name=${encodeURIComponent(item.name)}`);
+        router.push(
+          `/artist-details?id=${item.id}&name=${encodeURIComponent(item.name)}`,
+        );
       }}
     >
       <View style={styles.artistItemLeft}>
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={styles.artistImage} />
         ) : (
-          <View style={[styles.artistIcon, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.artistIcon, { backgroundColor: colors.surface }]}
+          >
             <User size={24} color={colors.primary} />
           </View>
         )}

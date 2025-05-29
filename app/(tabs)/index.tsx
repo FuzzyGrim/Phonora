@@ -27,7 +27,6 @@ export default function HomeScreen() {
     error,
     fetchSongs,
     getCoverArtUrl,
-    playSong,
     pauseSong,
     resumeSong,
     playback,
@@ -50,7 +49,7 @@ export default function HomeScreen() {
       }
     } else {
       // Use playSongFromSource instead to set up the playlist properly
-      await playSongFromSource(song, 'library', songs);
+      await playSongFromSource(song, "library", songs);
     }
   };
 

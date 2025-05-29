@@ -23,7 +23,6 @@ import {
 import md5 from "md5";
 import { router } from "expo-router";
 
-
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const { config, setConfig, userSettings, setUserSettings } =
@@ -66,7 +65,9 @@ export default function SettingsScreen() {
   // Sync local state when userSettings changes (e.g., when loaded from storage)
   useEffect(() => {
     if (userSettings.maxCacheSize !== undefined) {
-      console.log(`Syncing userSettings.maxCacheSize: ${userSettings.maxCacheSize} (type: ${typeof userSettings.maxCacheSize})`);
+      console.log(
+        `Syncing userSettings.maxCacheSize: ${userSettings.maxCacheSize} (type: ${typeof userSettings.maxCacheSize})`,
+      );
       setMaxCacheSize(userSettings.maxCacheSize);
       setMaxCacheSizeInput(userSettings.maxCacheSize.toString());
     }
@@ -321,7 +322,9 @@ export default function SettingsScreen() {
                   thumbColor={colors.surface}
                 />
               </View>
-              <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.helperText, { color: colors.textSecondary }]}
+              >
                 When enabled, the app will use only cached content when no
                 internet connection is available
               </Text>
@@ -364,7 +367,7 @@ export default function SettingsScreen() {
                     setMaxCacheSizeInput(text);
 
                     // Normalize decimal separator (replace comma with dot for parsing)
-                    const normalizedText = text.replace(',', '.');
+                    const normalizedText = text.replace(",", ".");
 
                     // Only update the actual maxCacheSize if it's a valid number
                     const numValue = parseFloat(normalizedText);
@@ -374,7 +377,7 @@ export default function SettingsScreen() {
                   }}
                   onBlur={() => {
                     // Normalize decimal separator for parsing
-                    const normalizedInput = maxCacheSizeInput.replace(',', '.');
+                    const normalizedInput = maxCacheSizeInput.replace(",", ".");
                     const numValue = parseFloat(normalizedInput);
 
                     if (isNaN(numValue) || numValue < 0) {
@@ -400,19 +403,27 @@ export default function SettingsScreen() {
                   <PlusCircle color={colors.textSecondary} size={20} />
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-                Maximum storage space for all cached files (songs and images) in GB
+              <Text
+                style={[styles.helperText, { color: colors.textSecondary }]}
+              >
+                Maximum storage space for all cached files (songs and images) in
+                GB
               </Text>
             </View>
 
             {/* View Cached Songs Button */}
             <TouchableOpacity
-              style={[styles.viewCachedButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.viewCachedButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => router.push("/cached-songs")}
             >
               <View style={styles.buttonContent}>
                 <HardDrive color={colors.textSecondary} size={18} />
-                <Text style={[styles.viewCachedButtonText, { color: colors.text }]}>
+                <Text
+                  style={[styles.viewCachedButtonText, { color: colors.text }]}
+                >
                   View Cached Songs
                 </Text>
               </View>

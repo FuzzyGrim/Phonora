@@ -7,20 +7,27 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { Search as SearchIcon, Music, User, Disc, Play, Pause } from "lucide-react-native";
+import {
+  Search as SearchIcon,
+  Music,
+  User,
+  Disc,
+  Play,
+  Pause,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import { Song, Artist, Album } from "@/store/musicPlayerStore";
 
 // Type for items in our FlatList
 type SearchItem =
-  | { type: 'header'; title: string; }
-  | { type: 'artist'; data: Artist; }
-  | { type: 'album'; data: Album; }
-  | { type: 'song'; data: Song; };
+  | { type: "header"; title: string }
+  | { type: "artist"; data: Artist }
+  | { type: "album"; data: Album }
+  | { type: "song"; data: Song };
 
 export default function SearchScreen() {
   const { colors } = useTheme();
@@ -29,14 +36,15 @@ export default function SearchScreen() {
     searchResults,
     isSearching,
     getCoverArtUrl,
-    playSong,
     playSongFromSource,
     playback,
     pauseSong,
-    resumeSong
+    resumeSong,
   } = useMusicPlayerStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   // Handle search when query changes
   useEffect(() => {
@@ -64,15 +72,23 @@ export default function SearchScreen() {
         clearTimeout(searchTimeout);
       }
     };
-  }, [searchQuery, search]);
+  }, [searchQuery, search, searchTimeout]);
 
   const handlePlaySong = (song: Song) => {
     // If the song is already playing, pause it
-    if (playback.currentSong && playback.currentSong.id === song.id && playback.isPlaying) {
+    if (
+      playback.currentSong &&
+      playback.currentSong.id === song.id &&
+      playback.isPlaying
+    ) {
       pauseSong();
     }
     // If the song is paused, resume it
-    else if (playback.currentSong && playback.currentSong.id === song.id && !playback.isPlaying) {
+    else if (
+      playback.currentSong &&
+      playback.currentSong.id === song.id &&
+      !playback.isPlaying
+    ) {
       resumeSong();
     }
     // Otherwise play the new song
@@ -80,11 +96,11 @@ export default function SearchScreen() {
       // Get all songs from search results
       const searchSongs = searchResults?.songs || [];
       if (searchSongs.length > 0) {
-        playSongFromSource(song, 'search', searchSongs);
+        playSongFromSource(song, "search", searchSongs);
       } else {
         // If no search songs, use global songs as fallback
         const { songs } = useMusicPlayerStore.getState();
-        playSongFromSource(song, 'library', songs);
+        playSongFromSource(song, "library", songs);
       }
     }
   };
@@ -92,14 +108,14 @@ export default function SearchScreen() {
   const navigateToAlbum = (albumId: string) => {
     router.push({
       pathname: "/(tabs)/album-details",
-      params: { id: albumId, source: 'search' }
+      params: { id: albumId, source: "search" },
     });
   };
 
   const navigateToArtist = (artistId: string) => {
     router.push({
       pathname: "/(tabs)/artist-details",
-      params: { id: artistId, source: 'search' }
+      params: { id: artistId, source: "search" },
     });
   };
 
@@ -111,25 +127,25 @@ export default function SearchScreen() {
 
     // Add artists section if there are any
     if (searchResults.artists.length > 0) {
-      items.push({ type: 'header', title: 'Artists' });
-      searchResults.artists.forEach(artist =>
-        items.push({ type: 'artist', data: artist })
+      items.push({ type: "header", title: "Artists" });
+      searchResults.artists.forEach((artist) =>
+        items.push({ type: "artist", data: artist }),
       );
     }
 
     // Add albums section if there are any
     if (searchResults.albums.length > 0) {
-      items.push({ type: 'header', title: 'Albums' });
-      searchResults.albums.forEach(album =>
-        items.push({ type: 'album', data: album })
+      items.push({ type: "header", title: "Albums" });
+      searchResults.albums.forEach((album) =>
+        items.push({ type: "album", data: album }),
       );
     }
 
     // Add songs section if there are any
     if (searchResults.songs.length > 0) {
-      items.push({ type: 'header', title: 'Songs' });
-      searchResults.songs.forEach(song =>
-        items.push({ type: 'song', data: song })
+      items.push({ type: "header", title: "Songs" });
+      searchResults.songs.forEach((song) =>
+        items.push({ type: "song", data: song }),
       );
     }
 
@@ -137,13 +153,13 @@ export default function SearchScreen() {
   };
 
   const renderSearchItem = ({ item }: { item: SearchItem }) => {
-    if (item.type === 'header') {
+    if (item.type === "header") {
       return (
         <Text style={[styles.sectionHeader, { color: colors.text }]}>
           {item.title}
         </Text>
       );
-    } else if (item.type === 'artist') {
+    } else if (item.type === "artist") {
       return (
         <TouchableOpacity
           style={[styles.itemContainer, { borderBottomColor: colors.border }]}
@@ -153,16 +169,21 @@ export default function SearchScreen() {
             <User size={24} color={colors.textSecondary} />
           </View>
           <View style={styles.itemDetails}>
-            <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.itemTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {item.data.name}
             </Text>
-            <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.itemSubtitle, { color: colors.textSecondary }]}
+            >
               Artist
             </Text>
           </View>
         </TouchableOpacity>
       );
-    } else if (item.type === 'album') {
+    } else if (item.type === "album") {
       return (
         <TouchableOpacity
           style={[styles.itemContainer, { borderBottomColor: colors.border }]}
@@ -174,21 +195,32 @@ export default function SearchScreen() {
               style={styles.albumCover}
             />
           ) : (
-            <View style={[styles.iconContainer, { backgroundColor: colors.surface }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.surface },
+              ]}
+            >
               <Disc size={24} color={colors.textSecondary} />
             </View>
           )}
           <View style={styles.itemDetails}>
-            <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.itemTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {item.data.name}
             </Text>
-            <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.itemSubtitle, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
               {item.data.artist} • {item.data.songCount} songs
             </Text>
           </View>
         </TouchableOpacity>
       );
-    } else if (item.type === 'song') {
+    } else if (item.type === "song") {
       return (
         <TouchableOpacity
           style={[styles.itemContainer, { borderBottomColor: colors.border }]}
@@ -200,20 +232,36 @@ export default function SearchScreen() {
               style={styles.albumCover}
             />
           ) : (
-            <View style={[styles.iconContainer, { backgroundColor: colors.surface }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.surface },
+              ]}
+            >
               <Music size={24} color={colors.textSecondary} />
             </View>
           )}
           <View style={styles.itemDetails}>
-            <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.itemTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {item.data.title}
             </Text>
-            <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.itemSubtitle, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
               {item.data.artist} • {item.data.album}
             </Text>
           </View>
-          <TouchableOpacity style={styles.playButton} onPress={() => handlePlaySong(item.data)}>
-            {playback.currentSong && playback.currentSong.id === item.data.id && playback.isPlaying ? (
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={() => handlePlaySong(item.data)}
+          >
+            {playback.currentSong &&
+              playback.currentSong.id === item.data.id &&
+              playback.isPlaying ? (
               <Pause size={18} color={colors.text} />
             ) : (
               <Play size={18} color={colors.text} />

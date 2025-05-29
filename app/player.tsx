@@ -45,7 +45,6 @@ export default function PlayerScreen() {
     seekForward,
     seekBackward,
     setPlaybackRate,
-    playSong,
     playSongFromSource,
     seekToPosition,
     currentPlaylist,
@@ -179,7 +178,7 @@ export default function PlayerScreen() {
     setLocalIsShuffle(newIsShuffle);
     // If enabling shuffle, disable repeat
     if (newIsShuffle) {
-      setLocalRepeatMode('off');
+      setLocalRepeatMode("off");
     }
     // Update store state
     toggleShuffle();
@@ -187,23 +186,23 @@ export default function PlayerScreen() {
 
   const handleToggleRepeat = () => {
     // Immediately update local state for instant UI feedback
-    let newRepeatMode: 'off' | 'one' | 'all';
+    let newRepeatMode: "off" | "one" | "all";
     switch (localRepeatMode) {
-      case 'off':
-        newRepeatMode = 'all';
+      case "off":
+        newRepeatMode = "all";
         break;
-      case 'all':
-        newRepeatMode = 'one';
+      case "all":
+        newRepeatMode = "one";
         break;
-      case 'one':
-        newRepeatMode = 'off';
+      case "one":
+        newRepeatMode = "off";
         break;
       default:
-        newRepeatMode = 'off';
+        newRepeatMode = "off";
     }
     setLocalRepeatMode(newRepeatMode);
     // If enabling repeat, disable shuffle
-    if (newRepeatMode !== 'off') {
+    if (newRepeatMode !== "off") {
       setLocalIsShuffle(false);
     }
     // Update store state
@@ -246,7 +245,7 @@ export default function PlayerScreen() {
 
   const handleSongPress = (song: Song) => {
     // Use the songsToDisplay as the playlist source
-    playSongFromSource(song, 'library', songsToDisplay);
+    playSongFromSource(song, "library", songsToDisplay);
   };
 
   const handleSliderChange = (value: number) => {
@@ -258,7 +257,7 @@ export default function PlayerScreen() {
   };
 
   const handleSliderSlidingComplete = async (value: number) => {
-    console.log('Seeking to position:', value, 'seconds');
+    console.log("Seeking to position:", value, "seconds");
     seekingRef.current = true;
 
     try {
@@ -273,7 +272,7 @@ export default function PlayerScreen() {
         setIsSliderBeingDragged(false);
       }, 300);
     } catch (error) {
-      console.error('Error during slider seek:', error);
+      console.error("Error during slider seek:", error);
       seekingRef.current = false;
       setIsSliderBeingDragged(false);
     }
@@ -482,16 +481,20 @@ export default function PlayerScreen() {
             <SkipForward size={28} color={colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleToggleRepeat} style={styles.controlButton}>
-            {localRepeatMode === 'one' ? (
-              <Repeat1
-                size={24}
-                color={colors.primary}
-              />
+          <TouchableOpacity
+            onPress={handleToggleRepeat}
+            style={styles.controlButton}
+          >
+            {localRepeatMode === "one" ? (
+              <Repeat1 size={24} color={colors.primary} />
             ) : (
               <Repeat
                 size={24}
-                color={localRepeatMode === 'all' ? colors.primary : colors.textSecondary}
+                color={
+                  localRepeatMode === "all"
+                    ? colors.primary
+                    : colors.textSecondary
+                }
               />
             )}
           </TouchableOpacity>
