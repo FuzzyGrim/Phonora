@@ -14,18 +14,6 @@ let cacheCleanupInProgress = false;
 let recentlyDeletedFiles: Set<string> = new Set();
 
 /**
- * Utility function to shuffle an array using Fisher-Yates algorithm
- */
-const shuffleArray = <T>(array: T[]): T[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
-
-/**
  * Represents a song in the Subsonic API
  */
 export interface Song {
@@ -108,12 +96,12 @@ interface MusicPlayerState {
   searchResults: SearchResults | null;
   isSearching: boolean;
   currentPlaylist: {
-    source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist';
+    source: "search" | "library" | "album" | "artist" | "genre" | "playlist";
     songs: Song[];
   } | null;
   isRepeat: boolean;
   isShuffle: boolean;
-  repeatMode: 'off' | 'one' | 'all';
+  repeatMode: "off" | "one" | "all";
 
   // Authentication actions
   setConfig: (config: SubsonicConfig) => void;
@@ -130,7 +118,11 @@ interface MusicPlayerState {
 
   // Playback control
   playSong: (song: Song) => Promise<void>;
-  playSongFromSource: (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist', sourceSongs: Song[]) => Promise<void>;
+  playSongFromSource: (
+    song: Song,
+    source: "search" | "library" | "album" | "artist" | "genre" | "playlist",
+    sourceSongs: Song[],
+  ) => Promise<void>;
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
@@ -144,7 +136,7 @@ interface MusicPlayerState {
   // Repeat and Shuffle controls
   toggleRepeat: () => void;
   toggleShuffle: () => void;
-  setRepeatMode: (mode: 'off' | 'one' | 'all') => void;
+  setRepeatMode: (mode: "off" | "one" | "all") => void;
 
   // Cache management
   clearCache: () => Promise<void>;
@@ -154,7 +146,16 @@ interface MusicPlayerState {
   downloadImage: (imageId: string, songTitle: string) => Promise<string>;
   getCacheSize: () => Promise<number>;
   hasEnoughCacheSpace: (sizeInBytes: number) => Promise<boolean>;
-  getCachedFiles: () => Promise<Array<{ path: string; id: string; extension: string; size: number; modTime: number; filename: string }>>;
+  getCachedFiles: () => Promise<
+    {
+      path: string;
+      id: string;
+      extension: string;
+      size: number;
+      modTime: number;
+      filename: string;
+    }[]
+  >;
   freeUpCacheSpace: (requiredSpace: number) => Promise<number>;
 
   // Initialization
@@ -187,7 +188,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   currentPlaylist: null,
   isRepeat: false,
   isShuffle: false,
-  repeatMode: 'off',
+  repeatMode: "off",
   playback: {
     isPlaying: false,
     currentSong: null,
@@ -278,20 +279,27 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           // Try to delete the entire directory first
           await FileSystem.deleteAsync(CACHE_DIRECTORY);
         } catch (deleteError) {
-          console.log("Could not delete the entire cache directory, trying file by file:", deleteError);
-          
+          console.log(
+            "Could not delete the entire cache directory, trying file by file:",
+            deleteError,
+          );
+
           // If deleting the whole directory fails, try deleting individual files
           try {
             const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
             for (const file of files) {
               const filePath = CACHE_DIRECTORY + file;
               try {
-                const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
+                const fileInfo = await FileSystem.getInfoAsync(filePath, {
+                  size: true,
+                });
                 if (fileInfo.exists) {
                   await FileSystem.deleteAsync(filePath);
                   // Display size in MB for better readability
                   const fileSize = (fileInfo as any).size || 0;
-                  console.log(`Deleted cached file: ${file} (${(fileSize / (1024 * 1024)).toFixed(2)} MB)`);
+                  console.log(
+                    `Deleted cached file: ${file} (${(fileSize / (1024 * 1024)).toFixed(2)} MB)`,
+                  );
                 }
               } catch (fileDeleteError) {
                 console.log(`Could not delete file ${file}:`, fileDeleteError);
@@ -326,7 +334,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   getCacheSize: async () => {
     try {
-      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY, { size: true });
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY, {
+        size: true,
+      });
       if (!cacheInfo.exists) {
         return 0;
       }
@@ -344,22 +354,23 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   hasEnoughCacheSpace: async (sizeInBytes: number) => {
     const { userSettings } = get();
-    
+
     // If cache size limit is 0, caching is disabled
     if (userSettings.maxCacheSize <= 0) {
       return false;
     }
-    
+
     try {
       // Get current cache size
       const currentCacheSize = await get().getCacheSize();
-      
+
       // Convert maxCacheSize from GB to bytes (1GB = 1024^3 bytes)
-      const maxCacheSizeInBytes = userSettings.maxCacheSize * 1024 * 1024 * 1024;
-      
+      const maxCacheSizeInBytes =
+        userSettings.maxCacheSize * 1024 * 1024 * 1024;
+
       // Check if adding the new file would exceed the limit
-      const hasSpace = (currentCacheSize + sizeInBytes) <= maxCacheSizeInBytes;
-      
+      const hasSpace = currentCacheSize + sizeInBytes <= maxCacheSizeInBytes;
+
       return hasSpace;
     } catch (error) {
       console.error("Error checking cache space:", error);
@@ -377,36 +388,40 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
       if (!dirInfo.exists) {
         // Create the directory if it doesn't exist
-        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
         return []; // Return empty array since we just created the directory
       }
-      
+
       const files = await FileSystem.readDirectoryAsync(CACHE_DIRECTORY);
-      
+
       // Get info for each file including creation date and size
       const fileInfos = [];
       for (const filename of files) {
         try {
           const filePath = CACHE_DIRECTORY + filename;
-          const fileInfo = await FileSystem.getInfoAsync(filePath, { size: true });
-          
+          const fileInfo = await FileSystem.getInfoAsync(filePath, {
+            size: true,
+          });
+
           if (fileInfo.exists) {
             // Extract the file ID and extension
             const match = filename.match(/(.+)\.([^.]+)$/);
             const fileId = match ? match[1] : filename;
-            const extension = match ? match[2] : '';
-            
+            const extension = match ? match[2] : "";
+
             // FileSystem.getInfoAsync with size:true returns modificationTime and size
             // but the types don't include these, so we need to cast
             const fileInfoWithMeta = fileInfo as any;
-            
+
             fileInfos.push({
               path: filePath,
               id: fileId,
               extension,
               size: fileInfoWithMeta.size || 0,
               modTime: fileInfoWithMeta.modificationTime || 0,
-              filename
+              filename,
             });
           }
         } catch (fileError) {
@@ -414,7 +429,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           // Skip this file and continue with others
         }
       }
-      
+
       // Sort files by modification time (oldest first)
       return fileInfos.sort((a, b) => a.modTime - b.modTime);
     } catch (error) {
@@ -429,50 +444,55 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   freeUpCacheSpace: async (requiredSpace: number) => {
     if (cacheCleanupInProgress) {
-      console.log("Cache cleanup already in progress, skipping duplicate cleanup");
+      console.log(
+        "Cache cleanup already in progress, skipping duplicate cleanup",
+      );
       return 0; // Return 0 to indicate no additional space was freed
     }
 
     try {
       cacheCleanupInProgress = true;
-      
+
       let freedSpace = 0;
       const { userSettings } = get();
       const cachedFiles = await get().getCachedFiles();
-      
+
       // Calculate how much space we need to free
       const currentCacheSize = await get().getCacheSize();
-      const maxCacheSizeInBytes = userSettings.maxCacheSize * 1024 * 1024 * 1024;
-      
+      const maxCacheSizeInBytes =
+        userSettings.maxCacheSize * 1024 * 1024 * 1024;
+
       // We need to free enough space for the new file AND to bring the total under the limit
       const targetFreeSpace = Math.max(
         requiredSpace,
-        currentCacheSize + requiredSpace - maxCacheSizeInBytes
+        currentCacheSize + requiredSpace - maxCacheSizeInBytes,
       );
-      
-      console.log(`Current cache: ${(currentCacheSize / (1024 * 1024)).toFixed(2)} MB, ` + 
-                  `Max cache: ${(maxCacheSizeInBytes / (1024 * 1024)).toFixed(2)} MB, ` +
-                  `Need to free: ${(targetFreeSpace / (1024 * 1024)).toFixed(2)} MB`);
-      
+
+      console.log(
+        `Current cache: ${(currentCacheSize / (1024 * 1024)).toFixed(2)} MB, ` +
+          `Max cache: ${(maxCacheSizeInBytes / (1024 * 1024)).toFixed(2)} MB, ` +
+          `Need to free: ${(targetFreeSpace / (1024 * 1024)).toFixed(2)} MB`,
+      );
+
       // Clear recently deleted files set at the start of each cleanup session
       recentlyDeletedFiles.clear();
-      
+
       // Delete files until we have freed enough space
       for (const file of cachedFiles) {
         // Skip deleting the file if we've already freed enough space
         if (freedSpace >= targetFreeSpace) {
           break;
         }
-        
+
         // Skip files we've already tried to delete in this session
         if (recentlyDeletedFiles.has(file.path)) {
           console.log(`Already attempted to delete ${file.filename}, skipping`);
           continue;
         }
-        
+
         // Mark this file as processed
         recentlyDeletedFiles.add(file.path);
-        
+
         // Check if file exists before attempting to delete it
         const fileExists = await FileSystem.getInfoAsync(file.path);
         if (fileExists.exists) {
@@ -480,7 +500,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
             // Delete the file
             await FileSystem.deleteAsync(file.path);
             freedSpace += file.size;
-            console.log(`Freed up ${(file.size / (1024 * 1024)).toFixed(2)} MB by deleting ${file.filename}`);
+            console.log(
+              `Freed up ${(file.size / (1024 * 1024)).toFixed(2)} MB by deleting ${file.filename}`,
+            );
           } catch (deleteError) {
             console.log(`Could not delete file ${file.filename}:`, deleteError);
             // Continue with next file rather than aborting the whole operation
@@ -489,7 +511,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           console.log(`File ${file.filename} no longer exists, skipping`);
         }
       }
-      
+
       return freedSpace;
     } catch (error) {
       console.error("Error freeing up cache space:", error);
@@ -507,19 +529,24 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     try {
       const filePath = get().getCachedFilePath(fileId, extension);
       const fileInfo = await FileSystem.getInfoAsync(filePath);
-      
+
       // Verify that the file exists AND has content (size > 0)
       if (fileInfo.exists) {
         // Optional: Check if the file has content by getting its size
-        const fileWithSize = await FileSystem.getInfoAsync(filePath, { size: true });
+        const fileWithSize = await FileSystem.getInfoAsync(filePath, {
+          size: true,
+        });
         const fileSize = (fileWithSize as any).size || 0;
-        
+
         // Consider a file correctly cached only if it has content
         return fileSize > 0;
       }
       return false;
     } catch (error) {
-      console.error(`Error checking if file is cached (${fileId}.${extension}):`, error);
+      console.error(
+        `Error checking if file is cached (${fileId}.${extension}):`,
+        error,
+      );
       return false;
     }
   },
@@ -543,7 +570,10 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         return get().getCachedFilePath(song.id, "mp3");
       }
     } catch (cacheCheckError) {
-      console.log(`Error checking if song is cached for ${song.title}:`, cacheCheckError);
+      console.log(
+        `Error checking if song is cached for ${song.title}:`,
+        cacheCheckError,
+      );
       // Continue with downloading even if there was an error checking the cache
     }
 
@@ -551,13 +581,20 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     try {
       const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
       if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
       }
     } catch (dirError) {
-      console.error(`Error ensuring cache directory exists for song ${song.title}:`, dirError);
+      console.error(
+        `Error ensuring cache directory exists for song ${song.title}:`,
+        dirError,
+      );
       // Create a new attempt to make the directory
       try {
-        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
       } catch (retryError) {
         console.error(`Failed to create cache directory on retry:`, retryError);
         // If we can't create the directory, we can't cache the file
@@ -570,36 +607,44 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     const filePath = get().getCachedFilePath(song.id, "mp3");
 
     // Check if caching is enabled
-    const shouldCache = userSettings.offlineMode || userSettings.maxCacheSize > 0;
+    const shouldCache =
+      userSettings.offlineMode || userSettings.maxCacheSize > 0;
     if (shouldCache) {
       try {
         // Estimate the file size - we'll use 10MB as a conservative estimate for an audio file
         // This could be improved by getting the Content-Length header from a HEAD request
         const estimatedSizeInBytes = 10 * 1024 * 1024; // 10MB
-        
+
         // Only proceed with caching if caching size is greater than 0
         if (userSettings.maxCacheSize > 0) {
           // Check if we have enough space in the cache
-          const hasSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
-          
+          const hasSpace =
+            await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+
           if (!hasSpace) {
             // Try to free up space by deleting older files
-            const freedSpace = await get().freeUpCacheSpace(estimatedSizeInBytes);
-            console.log(`Freed ${(freedSpace / (1024 * 1024)).toFixed(2)} MB of cache space`);
-            
+            const freedSpace =
+              await get().freeUpCacheSpace(estimatedSizeInBytes);
+            console.log(
+              `Freed ${(freedSpace / (1024 * 1024)).toFixed(2)} MB of cache space`,
+            );
+
             // Verify we now have enough space
-            const recheckedSpace = await get().hasEnoughCacheSpace(estimatedSizeInBytes);
+            const recheckedSpace =
+              await get().hasEnoughCacheSpace(estimatedSizeInBytes);
             if (!recheckedSpace && !userSettings.offlineMode) {
-              console.log("Still not enough cache space after cleanup, using stream URL");
+              console.log(
+                "Still not enough cache space after cleanup, using stream URL",
+              );
               return streamUrl;
             }
           }
         }
-        
+
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           streamUrl,
-          filePath
+          filePath,
         );
 
         if (downloadResult.status === 200) {
@@ -607,7 +652,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         } else {
           throw new Error(`HTTP Error: ${downloadResult.status}`);
         }
-        } catch (error) {
+      } catch (error) {
         console.error(`Failed to cache song: ${song.title}`, error);
         throw error;
       }
@@ -629,20 +674,30 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         return get().getCachedFilePath(imageId, "jpg");
       }
     } catch (cacheCheckError) {
-      // Continue with downloading even if there was an error checking the cache
+      console.log(
+        `Error checking if image is cached for ${songTitle}:`,
+        cacheCheckError,
+      );
     }
 
     // Ensure directory exists
     try {
       const dirInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
       if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
       }
     } catch (dirError) {
-      console.error(`Error ensuring cache directory exists for image ${songTitle}:`, dirError);
+      console.error(
+        `Error ensuring cache directory exists for image ${songTitle}:`,
+        dirError,
+      );
       // Create a new attempt to make the directory
       try {
-        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
       } catch (retryError) {
         console.error(`Failed to create cache directory on retry:`, retryError);
         // If we can't create the directory, we can't cache the file
@@ -655,13 +710,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     const filePath = get().getCachedFilePath(imageId, "jpg");
 
     // Check if caching is enabled
-    const shouldCache = userSettings.offlineMode || userSettings.maxCacheSize > 0;
+    const shouldCache =
+      userSettings.offlineMode || userSettings.maxCacheSize > 0;
     if (shouldCache) {
       try {
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           imageUrl,
-          filePath
+          filePath,
         );
 
         if (downloadResult.status === 200) {
@@ -788,45 +844,51 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
       if (data["subsonic-response"].status === "ok") {
         const searchData = data["subsonic-response"].searchResult3;
-        
+
         // Create empty arrays if any part of the response is missing
-        const artists = searchData.artist ? searchData.artist.map((artist: any) => ({
-          id: artist.id,
-          name: artist.name,
-        })) : [];
-        
-        const albums = searchData.album ? searchData.album.map((album: any) => ({
-          id: album.id,
-          name: album.name,
-          artist: album.artist,
-          artistId: album.artistId,
-          coverArt: album.coverArt,
-          songCount: album.songCount || 0,
-        })) : [];
-        
-        const songs = searchData.song ? searchData.song.map((song: any) => ({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          album: song.album,
-          duration: song.duration,
-          coverArt: song.coverArt,
-        })) : [];
+        const artists = searchData.artist
+          ? searchData.artist.map((artist: any) => ({
+              id: artist.id,
+              name: artist.name,
+            }))
+          : [];
+
+        const albums = searchData.album
+          ? searchData.album.map((album: any) => ({
+              id: album.id,
+              name: album.name,
+              artist: album.artist,
+              artistId: album.artistId,
+              coverArt: album.coverArt,
+              songCount: album.songCount || 0,
+            }))
+          : [];
+
+        const songs = searchData.song
+          ? searchData.song.map((song: any) => ({
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration: song.duration,
+              coverArt: song.coverArt,
+            }))
+          : [];
 
         set({
           searchResults: { artists, albums, songs },
-          isSearching: false
+          isSearching: false,
         });
       } else {
         throw new Error(
-          data["subsonic-response"].error?.message || "Search failed"
+          data["subsonic-response"].error?.message || "Search failed",
         );
       }
     } catch (error) {
       console.error("Search error:", error);
       set({
         error: error instanceof Error ? error.message : "Search failed",
-        isSearching: false
+        isSearching: false,
       });
     }
   },
@@ -844,18 +906,18 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         // First pause the player to immediately stop the sound
         currentPlayer.pause();
         // Make sure to remove any existing event listeners
-        currentPlayer.removeAllListeners('playbackStatusUpdate');
+        currentPlayer.removeAllListeners("playbackStatusUpdate");
         // Then remove it to free up resources
         currentPlayer.remove();
       }
 
       // Update state to show we're loading
-      set(state => ({
+      set((state) => ({
         playback: {
           ...state.playback,
           isPlaying: false,
-          currentSong: song
-        }
+          currentSong: song,
+        },
       }));
 
       // Get audio source - either cached or streamed
@@ -864,7 +926,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
       // Check if the song is cached
       const isCached = await get().isFileCached(song.id, "mp3");
-      
+
       // Handle offline mode restriction
       if (userSettings.offlineMode && !isCached) {
         throw new Error("Cannot play song in offline mode: Song not cached");
@@ -874,13 +936,18 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       if (userSettings.maxCacheSize > 0) {
         // Start a promise to handle the audio caching
         // For new songs, we'll first perform cache cleanup once if needed
-        const audioCachePromise = isCached 
-          ? Promise.resolve(get().getCachedFilePath(song.id, "mp3")) 
-          : get().downloadSong(song).catch(err => {
-              console.warn(`Background audio caching failed for ${song.title}:`, err);
-              return get().getStreamUrl(song.id);
-            });
-        
+        const audioCachePromise = isCached
+          ? Promise.resolve(get().getCachedFilePath(song.id, "mp3"))
+          : get()
+              .downloadSong(song)
+              .catch((err) => {
+                console.warn(
+                  `Background audio caching failed for ${song.title}:`,
+                  err,
+                );
+                return get().getStreamUrl(song.id);
+              });
+
         // If the song has cover art, cache it also
         let imageCachePromise = Promise.resolve();
         if (song.coverArt) {
@@ -888,8 +955,15 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           if (!isImageCached) {
             // Download image in the background, don't await
             // Image download will skip cache management and use the song's cleanup
-            imageCachePromise = get().downloadImage(song.coverArt, song.title).then(() => {})
-              .catch(err => console.warn(`Background image caching failed for ${song.coverArt}:`, err));
+            imageCachePromise = get()
+              .downloadImage(song.coverArt, song.title)
+              .then(() => {})
+              .catch((err) =>
+                console.warn(
+                  `Background image caching failed for ${song.coverArt}:`,
+                  err,
+                ),
+              );
           }
         }
 
@@ -899,18 +973,22 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           const cachedPath = get().getCachedFilePath(song.id, "mp3");
           audioSource = { uri: cachedPath };
           console.log(`Playing cached song: ${song.title}`);
-          
+
           // Let image download in background
           imageCachePromise.catch(() => {});
         } else {
           // Use streaming URL while waiting for download
           const streamUrl = get().getStreamUrl(song.id);
           audioSource = { uri: streamUrl };
-          
+
           // Let both downloads happen in background
           Promise.all([audioCachePromise, imageCachePromise])
             .catch(() => {}) // Ignore errors to prevent app crashes
-            .finally(() => console.log(`Background caching operations completed for ${song.title}`));
+            .finally(() =>
+              console.log(
+                `Background caching operations completed for ${song.title}`,
+              ),
+            );
         }
       } else {
         // Caching is disabled, use streaming URL
@@ -933,11 +1011,11 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           console.log(`Song finished: ${song.title}`);
           // Check currentPlaylist state before calling skipToNext
           const { currentPlaylist, repeatMode, isShuffle } = get();
-          console.log("Song finished - currentPlaylist state:", { 
+          console.log("Song finished - currentPlaylist state:", {
             hasPlaylist: !!currentPlaylist,
             playlistLength: currentPlaylist?.songs?.length || 0,
             repeatMode,
-            isShuffle
+            isShuffle,
           });
           // Auto-play next song (handles repeat and shuffle logic)
           get().skipToNext();
@@ -945,7 +1023,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       };
 
       // Add the event listener to the player
-      player.addListener('playbackStatusUpdate', handlePlaybackStatusUpdate);
+      player.addListener("playbackStatusUpdate", handlePlaybackStatusUpdate);
 
       // Play the song
       player.play();
@@ -961,12 +1039,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     } catch (error) {
       console.error("Error playing song:", error);
       // Reset playback state on error
-      set(state => ({
+      set((state) => ({
         playback: {
           ...state.playback,
           isPlaying: false,
         },
-        error: error instanceof Error ? error.message : "Failed to play song"
+        error: error instanceof Error ? error.message : "Failed to play song",
       }));
     }
   },
@@ -975,15 +1053,19 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    * Play a song from a specific source (search results, library, album, etc.)
    * Sets the current playlist source for proper next/previous navigation
    */
-  playSongFromSource: async (song: Song, source: 'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist', sourceSongs: Song[]) => {
+  playSongFromSource: async (
+    song: Song,
+    source: "search" | "library" | "album" | "artist" | "genre" | "playlist",
+    sourceSongs: Song[],
+  ) => {
     // Set the current playlist source
     set({
       currentPlaylist: {
         source,
-        songs: sourceSongs
-      }
+        songs: sourceSongs,
+      },
     });
-    
+
     // Then play the song using the regular playSong method
     await get().playSong(song);
   },
@@ -1045,8 +1127,11 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
     try {
       // Ensure we don't seek beyond the song duration
-      const clampedPosition = Math.min(Math.max(positionSeconds, 0), player.duration || positionSeconds);
-      
+      const clampedPosition = Math.min(
+        Math.max(positionSeconds, 0),
+        player.duration || positionSeconds,
+      );
+
       await player.seekTo(clampedPosition);
     } catch (error) {
       console.error("Error seeking to position:", error);
@@ -1058,15 +1143,15 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   skipToNext: async () => {
     const { currentPlaylist, playback, songs, repeatMode, isShuffle } = get();
-    console.log("skipToNext called", { 
-      hasSong: !!playback.currentSong, 
+    console.log("skipToNext called", {
+      hasSong: !!playback.currentSong,
       hasPlaylist: !!currentPlaylist,
       playlistLength: currentPlaylist?.songs?.length || 0,
       globalSongsLength: songs?.length || 0,
       repeatMode,
-      isShuffle
+      isShuffle,
     });
-    
+
     // Check if we have a current song
     if (!playback.currentSong) {
       console.log("skipToNext returning early: No current song");
@@ -1074,7 +1159,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     }
 
     // Handle repeat one mode - just replay the same song
-    if (repeatMode === 'one') {
+    if (repeatMode === "one") {
       console.log("Repeat one mode: replaying current song");
       await get().playSong(playback.currentSong);
       return;
@@ -1101,7 +1186,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
     if (isShuffle) {
       // In shuffle mode, pick a random song (excluding current song)
-      const availableSongs = songsToUse.filter((_, index) => index !== currentIndex);
+      const availableSongs = songsToUse.filter(
+        (_, index) => index !== currentIndex,
+      );
       if (availableSongs.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableSongs.length);
         nextSong = availableSongs[randomIndex];
@@ -1112,10 +1199,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       if (currentIndex < songsToUse.length - 1) {
         nextSong = songsToUse[currentIndex + 1];
         console.log(`Playing next song in order: ${nextSong.title}`);
-      } else if (repeatMode === 'all') {
+      } else if (repeatMode === "all") {
         // If we're at the end and repeat all is on, go back to the beginning
         nextSong = songsToUse[0];
-        console.log(`Repeating playlist, playing first song: ${nextSong.title}`);
+        console.log(
+          `Repeating playlist, playing first song: ${nextSong.title}`,
+        );
       }
     }
 
@@ -1132,14 +1221,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   skipToPrevious: async () => {
     const { currentPlaylist, playback, songs, repeatMode, isShuffle } = get();
-    
+
     // Check if we have a current song
     if (!playback.currentSong) {
       return;
     }
 
     // Handle repeat one mode - just replay the same song
-    if (repeatMode === 'one') {
+    if (repeatMode === "one") {
       console.log("Repeat one mode: replaying current song");
       await get().playSong(playback.currentSong);
       return;
@@ -1164,7 +1253,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
     if (isShuffle) {
       // In shuffle mode, pick a random song (excluding current song)
-      const availableSongs = songsToUse.filter((_, index) => index !== currentIndex);
+      const availableSongs = songsToUse.filter(
+        (_, index) => index !== currentIndex,
+      );
       if (availableSongs.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableSongs.length);
         previousSong = availableSongs[randomIndex];
@@ -1173,7 +1264,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // Normal mode: play previous song in order
       if (currentIndex > 0) {
         previousSong = songsToUse[currentIndex - 1];
-      } else if (repeatMode === 'all') {
+      } else if (repeatMode === "all") {
         // If we're at the beginning and repeat all is on, go to the last song
         previousSong = songsToUse[songsToUse.length - 1];
       }
@@ -1195,7 +1286,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     // Get current time in seconds and add 10 seconds
     const currentTime = player.currentTime;
     const duration = player.duration;
-    
+
     // Seek forward 10 seconds, but don't go beyond the end
     const newPosition = Math.min(currentTime + 10, duration || 0);
     await player.seekTo(newPosition);
@@ -1210,7 +1301,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
     // Get current time in seconds and subtract 10 seconds
     const currentTime = player.currentTime;
-    
+
     // Seek backward 10 seconds, but don't go below 0
     const newPosition = Math.max(currentTime - 10, 0);
     await player.seekTo(newPosition);
@@ -1225,7 +1316,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
     if (!player) return;
 
     // Use the new setPlaybackRate method with pitch correction
-    player.setPlaybackRate(speed, 'medium');
+    player.setPlaybackRate(speed, "medium");
   },
 
   /**
@@ -1233,27 +1324,27 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   toggleRepeat: () => {
     set((state) => {
-      let newRepeatMode: 'off' | 'one' | 'all';
+      let newRepeatMode: "off" | "one" | "all";
       let newIsRepeat: boolean;
-      
+
       switch (state.repeatMode) {
-        case 'off':
-          newRepeatMode = 'all';
+        case "off":
+          newRepeatMode = "all";
           newIsRepeat = true;
           break;
-        case 'all':
-          newRepeatMode = 'one';
+        case "all":
+          newRepeatMode = "one";
           newIsRepeat = true;
           break;
-        case 'one':
-          newRepeatMode = 'off';
+        case "one":
+          newRepeatMode = "off";
           newIsRepeat = false;
           break;
         default:
-          newRepeatMode = 'off';
+          newRepeatMode = "off";
           newIsRepeat = false;
       }
-      
+
       return {
         repeatMode: newRepeatMode,
         isRepeat: newIsRepeat,
@@ -1266,12 +1357,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   /**
    * Set repeat mode directly
    */
-  setRepeatMode: (mode: 'off' | 'one' | 'all') => {
+  setRepeatMode: (mode: "off" | "one" | "all") => {
     set((state) => ({
       repeatMode: mode,
-      isRepeat: mode !== 'off',
+      isRepeat: mode !== "off",
       // If enabling repeat, disable shuffle
-      isShuffle: mode !== 'off' ? false : state.isShuffle,
+      isShuffle: mode !== "off" ? false : state.isShuffle,
     }));
   },
 

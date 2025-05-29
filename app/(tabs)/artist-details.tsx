@@ -93,12 +93,12 @@ export default function ArtistDetailsScreen() {
           const artistInfo = artistData["subsonic-response"].artist;
           const formattedAlbums: ArtistAlbum[] = artistInfo.album
             ? artistInfo.album.map((album: any) => ({
-              id: album.id,
-              name: album.name,
-              coverArt: album.coverArt,
-              songCount: album.songCount,
-              year: album.year,
-            }))
+                id: album.id,
+                name: album.name,
+                coverArt: album.coverArt,
+                songCount: album.songCount,
+                year: album.year,
+              }))
             : [];
 
           setArtist({
@@ -154,7 +154,7 @@ export default function ArtistDetailsScreen() {
         } else {
           throw new Error(
             artistData["subsonic-response"].error?.message ||
-            "Failed to fetch artist details",
+              "Failed to fetch artist details",
           );
         }
       } catch (error) {

@@ -81,7 +81,7 @@ export default function PlaylistsScreen() {
         } else {
           throw new Error(
             data["subsonic-response"].error?.message ||
-            "Failed to fetch playlists",
+              "Failed to fetch playlists",
           );
         }
       } catch (error) {

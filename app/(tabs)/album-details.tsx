@@ -90,13 +90,13 @@ export default function AlbumDetailsScreen() {
           const albumInfo = albumData["subsonic-response"].album;
           const formattedSongs: AlbumSong[] = albumInfo.song
             ? albumInfo.song.map((song: any) => ({
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              duration: song.duration,
-              track: song.track,
-              coverArt: song.coverArt,
-            }))
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                duration: song.duration,
+                track: song.track,
+                coverArt: song.coverArt,
+              }))
             : [];
 
           setAlbum({
@@ -114,7 +114,7 @@ export default function AlbumDetailsScreen() {
         } else {
           throw new Error(
             albumData["subsonic-response"].error?.message ||
-            "Failed to fetch album details",
+              "Failed to fetch album details",
           );
         }
       } catch (error) {

@@ -1,34 +1,36 @@
-import { useMusicPlayerStore } from '../../store/musicPlayerStore';
-import { createAudioPlayer } from 'expo-audio';
-import type { Song } from '../../store/musicPlayerStore';
+import { useMusicPlayerStore } from "../../store/musicPlayerStore";
+import { createAudioPlayer } from "expo-audio";
+import type { Song } from "../../store/musicPlayerStore";
 
 // Mock dependencies
-jest.mock('expo-audio');
-jest.mock('expo-file-system');
+jest.mock("expo-audio");
+jest.mock("expo-file-system");
 
-const mockCreateAudioPlayer = createAudioPlayer as jest.MockedFunction<typeof createAudioPlayer>;
+const mockCreateAudioPlayer = createAudioPlayer as jest.MockedFunction<
+  typeof createAudioPlayer
+>;
 
 // Mock fetch
 global.fetch = jest.fn();
 
-describe('Music Player Store - Playback', () => {
+describe("Music Player Store - Playback", () => {
   let store: ReturnType<typeof useMusicPlayerStore.getState>;
   let mockPlayer: any;
 
   const mockSong: Song = {
-    id: 'song123',
-    title: 'Test Song',
-    artist: 'Test Artist',
-    album: 'Test Album',
+    id: "song123",
+    title: "Test Song",
+    artist: "Test Artist",
+    album: "Test Album",
     duration: 180,
-    coverArt: 'cover123',
+    coverArt: "cover123",
   };
 
   const mockConfig = {
-    serverUrl: 'https://demo.subsonic.org',
-    username: 'testuser',
-    password: 'testpass',
-    version: '1.16.1',
+    serverUrl: "https://demo.subsonic.org",
+    username: "testuser",
+    password: "testpass",
+    version: "1.16.1",
   };
 
   beforeEach(() => {
@@ -44,7 +46,7 @@ describe('Music Player Store - Playback', () => {
         player: null,
       },
       currentPlaylist: null,
-      repeatMode: 'off',
+      repeatMode: "off",
       isRepeat: false,
       isShuffle: false,
       userSettings: { offlineMode: false, maxCacheSize: 0 }, // Disable caching for most tests
@@ -68,17 +70,17 @@ describe('Music Player Store - Playback', () => {
     jest.clearAllMocks();
   });
 
-  describe('playSong', () => {
-    it('should play a song and update playback state', async () => {
+  describe("playSong", () => {
+    it("should play a song and update playback state", async () => {
       await store.playSong(mockSong);
 
       expect(mockCreateAudioPlayer).toHaveBeenCalledWith({
-        uri: expect.stringContaining('stream.view'),
+        uri: expect.stringContaining("stream.view"),
       });
       expect(mockPlayer.play).toHaveBeenCalled();
       expect(mockPlayer.addListener).toHaveBeenCalledWith(
-        'playbackStatusUpdate',
-        expect.any(Function)
+        "playbackStatusUpdate",
+        expect.any(Function),
       );
 
       const currentState = useMusicPlayerStore.getState();
@@ -87,7 +89,7 @@ describe('Music Player Store - Playback', () => {
       expect(currentState.playback.player).toBe(mockPlayer);
     });
 
-    it('should stop current player before playing new song', async () => {
+    it("should stop current player before playing new song", async () => {
       const oldPlayer = {
         pause: jest.fn(),
         remove: jest.fn(),
@@ -106,63 +108,77 @@ describe('Music Player Store - Playback', () => {
       await store.playSong(mockSong);
 
       expect(oldPlayer.pause).toHaveBeenCalled();
-      expect(oldPlayer.removeAllListeners).toHaveBeenCalledWith('playbackStatusUpdate');
+      expect(oldPlayer.removeAllListeners).toHaveBeenCalledWith(
+        "playbackStatusUpdate",
+      );
       expect(oldPlayer.remove).toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    it("should handle errors gracefully", async () => {
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       mockCreateAudioPlayer.mockImplementation(() => {
-        throw new Error('Audio player error');
+        throw new Error("Audio player error");
       });
 
       await store.playSong(mockSong);
 
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.playback.isPlaying).toBe(false);
-      expect(currentState.error).toBe('Audio player error');
-      expect(consoleSpy).toHaveBeenCalledWith('Error playing song:', expect.any(Error));
+      expect(currentState.error).toBe("Audio player error");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error playing song:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
-    it('should handle offline mode when song is not cached', async () => {
+    it("should handle offline mode when song is not cached", async () => {
       useMusicPlayerStore.setState({
         userSettings: { offlineMode: true, maxCacheSize: 10 },
       });
 
       // Mock isFileCached to return false
-      const isFileCachedSpy = jest.spyOn(store, 'isFileCached').mockResolvedValue(false);
+      const isFileCachedSpy = jest
+        .spyOn(store, "isFileCached")
+        .mockResolvedValue(false);
 
       await store.playSong(mockSong);
 
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.playback.isPlaying).toBe(false);
-      expect(currentState.error).toBe('Cannot play song in offline mode: Song not cached');
+      expect(currentState.error).toBe(
+        "Cannot play song in offline mode: Song not cached",
+      );
 
       isFileCachedSpy.mockRestore();
     });
   });
 
-  describe('playSongFromSource', () => {
-    it('should set current playlist and play song', async () => {
+  describe("playSongFromSource", () => {
+    it("should set current playlist and play song", async () => {
       const sourceSongs = [mockSong];
 
-      await store.playSongFromSource(mockSong, 'library', sourceSongs);
+      await store.playSongFromSource(mockSong, "library", sourceSongs);
 
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.currentPlaylist).toEqual({
-        source: 'library',
+        source: "library",
         songs: sourceSongs,
       });
       expect(currentState.playback.currentSong).toEqual(mockSong);
     });
 
-    it('should work with different source types', async () => {
+    it("should work with different source types", async () => {
       const sourceSongs = [mockSong];
-      const sources: Array<'search' | 'library' | 'album' | 'artist' | 'genre' | 'playlist'> = [
-        'search', 'library', 'album', 'artist', 'genre', 'playlist'
-      ];
+      const sources: (
+        | "search"
+        | "library"
+        | "album"
+        | "artist"
+        | "genre"
+        | "playlist"
+      )[] = ["search", "library", "album", "artist", "genre", "playlist"];
 
       for (const source of sources) {
         await store.playSongFromSource(mockSong, source, sourceSongs);
@@ -173,8 +189,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('pauseSong', () => {
-    it('should pause the current song', async () => {
+  describe("pauseSong", () => {
+    it("should pause the current song", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: true,
@@ -191,7 +207,7 @@ describe('Music Player Store - Playback', () => {
       expect(currentState.playback.isPlaying).toBe(false);
     });
 
-    it('should do nothing if no player exists', async () => {
+    it("should do nothing if no player exists", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: false,
@@ -208,8 +224,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('resumeSong', () => {
-    it('should resume the paused song', async () => {
+  describe("resumeSong", () => {
+    it("should resume the paused song", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: false,
@@ -227,8 +243,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('stopSong', () => {
-    it('should stop and release the player', async () => {
+  describe("stopSong", () => {
+    it("should stop and release the player", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: true,
@@ -249,8 +265,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('seekToPosition', () => {
-    it('should seek to the specified position', async () => {
+  describe("seekToPosition", () => {
+    it("should seek to the specified position", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: true,
@@ -264,7 +280,7 @@ describe('Music Player Store - Playback', () => {
       expect(mockPlayer.seekTo).toHaveBeenCalledWith(60);
     });
 
-    it('should clamp position to valid range', async () => {
+    it("should clamp position to valid range", async () => {
       mockPlayer.duration = 180;
       useMusicPlayerStore.setState({
         playback: {
@@ -283,25 +299,25 @@ describe('Music Player Store - Playback', () => {
       expect(mockPlayer.seekTo).toHaveBeenCalledWith(0);
     });
 
-    it('should do nothing if no player exists', async () => {
+    it("should do nothing if no player exists", async () => {
       // Set player to null to test the no-player scenario
       useMusicPlayerStore.setState({
         playback: {
           ...store.playback,
-          player: null
-        }
+          player: null,
+        },
       });
-      
+
       const updatedStore = useMusicPlayerStore.getState();
       await updatedStore.seekToPosition(60);
-      
+
       // Should complete without error when no player exists
       expect(updatedStore.playback.player).toBeNull();
     });
   });
 
-  describe('seekForward', () => {
-    it('should seek forward 10 seconds', async () => {
+  describe("seekForward", () => {
+    it("should seek forward 10 seconds", async () => {
       mockPlayer.currentTime = 30;
       mockPlayer.duration = 180;
       useMusicPlayerStore.setState({
@@ -317,7 +333,7 @@ describe('Music Player Store - Playback', () => {
       expect(mockPlayer.seekTo).toHaveBeenCalledWith(40);
     });
 
-    it('should not seek beyond song duration', async () => {
+    it("should not seek beyond song duration", async () => {
       mockPlayer.currentTime = 175;
       mockPlayer.duration = 180;
       useMusicPlayerStore.setState({
@@ -334,8 +350,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('seekBackward', () => {
-    it('should seek backward 10 seconds', async () => {
+  describe("seekBackward", () => {
+    it("should seek backward 10 seconds", async () => {
       mockPlayer.currentTime = 30;
       useMusicPlayerStore.setState({
         playback: {
@@ -350,7 +366,7 @@ describe('Music Player Store - Playback', () => {
       expect(mockPlayer.seekTo).toHaveBeenCalledWith(20);
     });
 
-    it('should not seek before song start', async () => {
+    it("should not seek before song start", async () => {
       mockPlayer.currentTime = 5;
       useMusicPlayerStore.setState({
         playback: {
@@ -366,8 +382,8 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('setPlaybackRate', () => {
-    it('should set playback rate with pitch correction', async () => {
+  describe("setPlaybackRate", () => {
+    it("should set playback rate with pitch correction", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: true,
@@ -378,14 +394,14 @@ describe('Music Player Store - Playback', () => {
 
       await store.setPlaybackRate(1.5);
 
-      expect(mockPlayer.setPlaybackRate).toHaveBeenCalledWith(1.5, 'medium');
+      expect(mockPlayer.setPlaybackRate).toHaveBeenCalledWith(1.5, "medium");
     });
   });
 
-  describe('skipToNext', () => {
-    it('should play next song in order', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
+  describe("skipToNext", () => {
+    it("should play next song in order", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
       const songs = [song1, song2];
 
       useMusicPlayerStore.setState({
@@ -396,7 +412,7 @@ describe('Music Player Store - Playback', () => {
           player: mockPlayer,
         },
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
       });
@@ -411,14 +427,14 @@ describe('Music Player Store - Playback', () => {
       useMusicPlayerStore.setState({ playSong: originalPlaySong });
     });
 
-    it('should handle repeat one mode', async () => {
+    it("should handle repeat one mode", async () => {
       useMusicPlayerStore.setState({
         playback: {
           isPlaying: true,
           currentSong: mockSong,
           player: mockPlayer,
         },
-        repeatMode: 'one',
+        repeatMode: "one",
       });
 
       const playSongSpy = jest.fn().mockResolvedValue(undefined);
@@ -431,9 +447,9 @@ describe('Music Player Store - Playback', () => {
       useMusicPlayerStore.setState({ playSong: originalPlaySong });
     });
 
-    it('should handle repeat all mode at end of playlist', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
+    it("should handle repeat all mode at end of playlist", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
       const songs = [song1, song2];
 
       useMusicPlayerStore.setState({
@@ -444,10 +460,10 @@ describe('Music Player Store - Playback', () => {
           player: mockPlayer,
         },
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
-        repeatMode: 'all',
+        repeatMode: "all",
       });
 
       const playSongSpy = jest.fn().mockResolvedValue(undefined);
@@ -460,10 +476,10 @@ describe('Music Player Store - Playback', () => {
       useMusicPlayerStore.setState({ playSong: originalPlaySong });
     });
 
-    it('should handle shuffle mode', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
-      const song3: Song = { ...mockSong, id: 'song3', title: 'Song 3' };
+    it("should handle shuffle mode", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
+      const song3: Song = { ...mockSong, id: "song3", title: "Song 3" };
       const songs = [song1, song2, song3];
 
       useMusicPlayerStore.setState({
@@ -474,7 +490,7 @@ describe('Music Player Store - Playback', () => {
           player: mockPlayer,
         },
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
         isShuffle: true,
@@ -483,13 +499,15 @@ describe('Music Player Store - Playback', () => {
       const playSongSpy = jest.fn().mockResolvedValue(undefined);
       const originalPlaySong = useMusicPlayerStore.getState().playSong;
       useMusicPlayerStore.setState({ playSong: playSongSpy });
-      const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      const mathRandomSpy = jest.spyOn(Math, "random").mockReturnValue(0.5);
 
       await store.skipToNext();
 
-      expect(playSongSpy).toHaveBeenCalledWith(expect.objectContaining({
-        id: expect.any(String),
-      }));
+      expect(playSongSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: expect.any(String),
+        }),
+      );
       // Should not play the same song
       expect(playSongSpy).not.toHaveBeenCalledWith(song1);
 
@@ -498,10 +516,10 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('skipToPrevious', () => {
-    it('should play previous song in order', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
+  describe("skipToPrevious", () => {
+    it("should play previous song in order", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
       const songs = [song1, song2];
 
       useMusicPlayerStore.setState({
@@ -512,7 +530,7 @@ describe('Music Player Store - Playback', () => {
           player: mockPlayer,
         },
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
       });
@@ -527,9 +545,9 @@ describe('Music Player Store - Playback', () => {
       useMusicPlayerStore.setState({ playSong: originalPlaySong });
     });
 
-    it('should handle repeat all mode at beginning of playlist', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
+    it("should handle repeat all mode at beginning of playlist", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
       const songs = [song1, song2];
 
       useMusicPlayerStore.setState({
@@ -540,10 +558,10 @@ describe('Music Player Store - Playback', () => {
           player: mockPlayer,
         },
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
-        repeatMode: 'all',
+        repeatMode: "all",
       });
 
       const playSongSpy = jest.fn().mockResolvedValue(undefined);
@@ -557,16 +575,16 @@ describe('Music Player Store - Playback', () => {
     });
   });
 
-  describe('Auto-play next song on finish', () => {
-    it('should auto-play next song when current song finishes', async () => {
-      const song1: Song = { ...mockSong, id: 'song1', title: 'Song 1' };
-      const song2: Song = { ...mockSong, id: 'song2', title: 'Song 2' };
+  describe("Auto-play next song on finish", () => {
+    it("should auto-play next song when current song finishes", async () => {
+      const song1: Song = { ...mockSong, id: "song1", title: "Song 1" };
+      const song2: Song = { ...mockSong, id: "song2", title: "Song 2" };
       const songs = [song1, song2];
 
       useMusicPlayerStore.setState({
         songs,
         currentPlaylist: {
-          source: 'library',
+          source: "library",
           songs,
         },
       });

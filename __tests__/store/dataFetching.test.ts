@@ -1,26 +1,23 @@
-import { useMusicPlayerStore } from '../../store/musicPlayerStore';
-import * as SecureStore from 'expo-secure-store';
-import type { Song } from '../../store/musicPlayerStore';
+import { useMusicPlayerStore } from "../../store/musicPlayerStore";
 
 // Mock dependencies
-jest.mock('expo-secure-store');
-jest.mock('md5', () => ({
+jest.mock("expo-secure-store");
+jest.mock("md5", () => ({
   __esModule: true,
   default: jest.fn((input: string) => `hashed_${input}`),
 }));
 
-const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 global.fetch = jest.fn();
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
-describe('Music Player Store - Data Fetching', () => {
+describe("Music Player Store - Data Fetching", () => {
   let store: ReturnType<typeof useMusicPlayerStore.getState>;
 
   const mockConfig = {
-    serverUrl: 'https://demo.subsonic.org',
-    username: 'testuser',
-    password: 'testpass',
-    version: '1.16.1',
+    serverUrl: "https://demo.subsonic.org",
+    username: "testuser",
+    password: "testpass",
+    version: "1.16.1",
   };
 
   beforeEach(() => {
@@ -39,28 +36,28 @@ describe('Music Player Store - Data Fetching', () => {
     jest.clearAllMocks();
   });
 
-  describe('fetchSongs', () => {
-    it('should fetch random songs successfully', async () => {
+  describe("fetchSongs", () => {
+    it("should fetch random songs successfully", async () => {
       const mockResponse = {
-        'subsonic-response': {
-          status: 'ok',
+        "subsonic-response": {
+          status: "ok",
           randomSongs: {
             song: [
               {
-                id: '1',
-                title: 'Test Song 1',
-                artist: 'Test Artist 1',
-                album: 'Test Album 1',
+                id: "1",
+                title: "Test Song 1",
+                artist: "Test Artist 1",
+                album: "Test Album 1",
                 duration: 180,
-                coverArt: 'cover1',
+                coverArt: "cover1",
               },
               {
-                id: '2',
-                title: 'Test Song 2',
-                artist: 'Test Artist 2',
-                album: 'Test Album 2',
+                id: "2",
+                title: "Test Song 2",
+                artist: "Test Artist 2",
+                album: "Test Album 2",
                 duration: 240,
-                coverArt: 'cover2',
+                coverArt: "cover2",
               },
             ],
           },
@@ -75,34 +72,36 @@ describe('Music Player Store - Data Fetching', () => {
       await store.fetchSongs();
 
       const currentState = useMusicPlayerStore.getState();
-      
+
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://demo.subsonic.org/rest/getRandomSongs.view')
+        expect.stringContaining(
+          "https://demo.subsonic.org/rest/getRandomSongs.view",
+        ),
       );
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('size=100')
+        expect.stringContaining("size=100"),
       );
-      
+
       expect(currentState.songs).toHaveLength(2);
       expect(currentState.songs[0]).toEqual({
-        id: '1',
-        title: 'Test Song 1',
-        artist: 'Test Artist 1',
-        album: 'Test Album 1',
+        id: "1",
+        title: "Test Song 1",
+        artist: "Test Artist 1",
+        album: "Test Album 1",
         duration: 180,
-        coverArt: 'cover1',
+        coverArt: "cover1",
       });
       expect(currentState.isLoading).toBe(false);
       expect(currentState.error).toBeNull();
     });
 
-    it('should handle API error responses', async () => {
+    it("should handle API error responses", async () => {
       const mockErrorResponse = {
-        'subsonic-response': {
-          status: 'failed',
+        "subsonic-response": {
+          status: "failed",
           error: {
             code: 40,
-            message: 'Wrong username or password',
+            message: "Wrong username or password",
           },
         },
       };
@@ -115,25 +114,25 @@ describe('Music Player Store - Data Fetching', () => {
       await store.fetchSongs();
 
       const currentState = useMusicPlayerStore.getState();
-      
+
       expect(currentState.songs).toEqual([]);
       expect(currentState.isLoading).toBe(false);
-      expect(currentState.error).toBe('Wrong username or password');
+      expect(currentState.error).toBe("Wrong username or password");
     });
 
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    it("should handle network errors", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       await store.fetchSongs();
 
       const currentState = useMusicPlayerStore.getState();
-      
+
       expect(currentState.songs).toEqual([]);
       expect(currentState.isLoading).toBe(false);
-      expect(currentState.error).toBe('Network error');
+      expect(currentState.error).toBe("Network error");
     });
 
-    it('should not fetch songs when no config is present', async () => {
+    it("should not fetch songs when no config is present", async () => {
       useMusicPlayerStore.setState({
         config: null,
         isAuthenticated: false,
@@ -142,12 +141,12 @@ describe('Music Player Store - Data Fetching', () => {
       await store.fetchSongs();
 
       expect(mockFetch).not.toHaveBeenCalled();
-      
+
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.songs).toEqual([]);
     });
 
-    it('should set loading state during fetch', async () => {
+    it("should set loading state during fetch", async () => {
       let resolvePromise: (value: any) => void;
       const fetchPromise = new Promise((resolve) => {
         resolvePromise = resolve;
@@ -165,12 +164,13 @@ describe('Music Player Store - Data Fetching', () => {
       // Resolve the fetch
       resolvePromise!({
         ok: true,
-        json: () => Promise.resolve({
-          'subsonic-response': {
-            status: 'ok',
-            randomSongs: { song: [] },
-          },
-        }),
+        json: () =>
+          Promise.resolve({
+            "subsonic-response": {
+              status: "ok",
+              randomSongs: { song: [] },
+            },
+          }),
       });
 
       await fetchPromise2;
@@ -180,33 +180,31 @@ describe('Music Player Store - Data Fetching', () => {
     });
   });
 
-  describe('search', () => {
-    it('should search successfully with all result types', async () => {
+  describe("search", () => {
+    it("should search successfully with all result types", async () => {
       const mockSearchResponse = {
-        'subsonic-response': {
-          status: 'ok',
+        "subsonic-response": {
+          status: "ok",
           searchResult3: {
-            artist: [
-              { id: 'artist1', name: 'Test Artist' },
-            ],
+            artist: [{ id: "artist1", name: "Test Artist" }],
             album: [
               {
-                id: 'album1',
-                name: 'Test Album',
-                artist: 'Test Artist',
-                artistId: 'artist1',
-                coverArt: 'cover1',
+                id: "album1",
+                name: "Test Album",
+                artist: "Test Artist",
+                artistId: "artist1",
+                coverArt: "cover1",
                 songCount: 10,
               },
             ],
             song: [
               {
-                id: 'song1',
-                title: 'Test Song',
-                artist: 'Test Artist',
-                album: 'Test Album',
+                id: "song1",
+                title: "Test Song",
+                artist: "Test Artist",
+                album: "Test Album",
                 duration: 180,
-                coverArt: 'cover1',
+                coverArt: "cover1",
               },
             ],
           },
@@ -218,37 +216,37 @@ describe('Music Player Store - Data Fetching', () => {
         json: () => Promise.resolve(mockSearchResponse),
       } as Response);
 
-      await store.search('test query');
+      await store.search("test query");
 
       const currentState = useMusicPlayerStore.getState();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://demo.subsonic.org/rest/search3.view')
+        expect.stringContaining("https://demo.subsonic.org/rest/search3.view"),
       );
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('query=test%20query')
+        expect.stringContaining("query=test%20query"),
       );
 
       expect(currentState.searchResults).toEqual({
-        artists: [{ id: 'artist1', name: 'Test Artist' }],
+        artists: [{ id: "artist1", name: "Test Artist" }],
         albums: [
           {
-            id: 'album1',
-            name: 'Test Album',
-            artist: 'Test Artist',
-            artistId: 'artist1',
-            coverArt: 'cover1',
+            id: "album1",
+            name: "Test Album",
+            artist: "Test Artist",
+            artistId: "artist1",
+            coverArt: "cover1",
             songCount: 10,
           },
         ],
         songs: [
           {
-            id: 'song1',
-            title: 'Test Song',
-            artist: 'Test Artist',
-            album: 'Test Album',
+            id: "song1",
+            title: "Test Song",
+            artist: "Test Artist",
+            album: "Test Album",
             duration: 180,
-            coverArt: 'cover1',
+            coverArt: "cover1",
           },
         ],
       });
@@ -256,10 +254,10 @@ describe('Music Player Store - Data Fetching', () => {
       expect(currentState.error).toBeNull();
     });
 
-    it('should handle empty search results gracefully', async () => {
+    it("should handle empty search results gracefully", async () => {
       const mockSearchResponse = {
-        'subsonic-response': {
-          status: 'ok',
+        "subsonic-response": {
+          status: "ok",
           searchResult3: {
             // No artist, album, or song arrays
           },
@@ -271,7 +269,7 @@ describe('Music Player Store - Data Fetching', () => {
         json: () => Promise.resolve(mockSearchResponse),
       } as Response);
 
-      await store.search('no results query');
+      await store.search("no results query");
 
       const currentState = useMusicPlayerStore.getState();
 
@@ -283,18 +281,18 @@ describe('Music Player Store - Data Fetching', () => {
       expect(currentState.isSearching).toBe(false);
     });
 
-    it('should clear search results for empty query', async () => {
+    it("should clear search results for empty query", async () => {
       // Set some initial search results
       useMusicPlayerStore.setState({
         searchResults: {
-          artists: [{ id: 'artist1', name: 'Test Artist' }],
+          artists: [{ id: "artist1", name: "Test Artist" }],
           albums: [],
           songs: [],
         },
         isSearching: true,
       });
 
-      await store.search('');
+      await store.search("");
 
       const currentState = useMusicPlayerStore.getState();
 
@@ -303,8 +301,8 @@ describe('Music Player Store - Data Fetching', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('should clear search results for whitespace-only query', async () => {
-      await store.search('   ');
+    it("should clear search results for whitespace-only query", async () => {
+      await store.search("   ");
 
       const currentState = useMusicPlayerStore.getState();
 
@@ -313,13 +311,13 @@ describe('Music Player Store - Data Fetching', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('should handle search API errors', async () => {
+    it("should handle search API errors", async () => {
       const mockErrorResponse = {
-        'subsonic-response': {
-          status: 'failed',
+        "subsonic-response": {
+          status: "failed",
           error: {
             code: 10,
-            message: 'Required parameter is missing',
+            message: "Required parameter is missing",
           },
         },
       };
@@ -329,47 +327,50 @@ describe('Music Player Store - Data Fetching', () => {
         json: () => Promise.resolve(mockErrorResponse),
       } as Response);
 
-      await store.search('test');
+      await store.search("test");
 
       const currentState = useMusicPlayerStore.getState();
 
       expect(currentState.searchResults).toBeNull();
       expect(currentState.isSearching).toBe(false);
-      expect(currentState.error).toBe('Required parameter is missing');
+      expect(currentState.error).toBe("Required parameter is missing");
     });
 
-    it('should handle search network errors', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
+    it("should handle search network errors", async () => {
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+      mockFetch.mockRejectedValueOnce(new Error("Network timeout"));
 
-      await store.search('test');
+      await store.search("test");
 
       const currentState = useMusicPlayerStore.getState();
 
       expect(currentState.searchResults).toBeNull();
       expect(currentState.isSearching).toBe(false);
-      expect(currentState.error).toBe('Network timeout');
-      expect(consoleSpy).toHaveBeenCalledWith('Search error:', expect.any(Error));
+      expect(currentState.error).toBe("Network timeout");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Search error:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
-    it('should not search when no config is present', async () => {
+    it("should not search when no config is present", async () => {
       useMusicPlayerStore.setState({
         config: null,
         isAuthenticated: false,
       });
 
-      await store.search('test');
+      await store.search("test");
 
       expect(mockFetch).not.toHaveBeenCalled();
-      
+
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.searchResults).toBeNull();
       expect(currentState.isSearching).toBe(false);
     });
 
-    it('should set searching state during search', async () => {
+    it("should set searching state during search", async () => {
       let resolvePromise: (value: any) => void;
       const searchPromise = new Promise((resolve) => {
         resolvePromise = resolve;
@@ -378,7 +379,7 @@ describe('Music Player Store - Data Fetching', () => {
       mockFetch.mockReturnValueOnce(searchPromise as Promise<Response>);
 
       // Start the search but don't await it
-      const searchPromise2 = store.search('test');
+      const searchPromise2 = store.search("test");
 
       // Check that searching state is set
       expect(useMusicPlayerStore.getState().isSearching).toBe(true);
@@ -387,12 +388,13 @@ describe('Music Player Store - Data Fetching', () => {
       // Resolve the search
       resolvePromise!({
         ok: true,
-        json: () => Promise.resolve({
-          'subsonic-response': {
-            status: 'ok',
-            searchResult3: {},
-          },
-        }),
+        json: () =>
+          Promise.resolve({
+            "subsonic-response": {
+              status: "ok",
+              searchResult3: {},
+            },
+          }),
       });
 
       await searchPromise2;
@@ -402,44 +404,45 @@ describe('Music Player Store - Data Fetching', () => {
     });
   });
 
-  describe('Data fetching integration with authentication', () => {
-    it('should include proper authentication parameters in requests', async () => {
+  describe("Data fetching integration with authentication", () => {
+    it("should include proper authentication parameters in requests", async () => {
       // Mock Math.random for predictable auth params
       const originalMathRandom = Math.random;
       Math.random = jest.fn(() => 0.123456789);
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          'subsonic-response': {
-            status: 'ok',
-            randomSongs: { song: [] },
-          },
-        }),
+        json: () =>
+          Promise.resolve({
+            "subsonic-response": {
+              status: "ok",
+              randomSongs: { song: [] },
+            },
+          }),
       } as Response);
 
       await store.fetchSongs();
 
       const fetchCall = mockFetch.mock.calls[0][0] as string;
-      
-      expect(fetchCall).toContain('u=testuser');
-      expect(fetchCall).toContain('v=1.16.1');
-      expect(fetchCall).toContain('c=subsonicapp');
-      expect(fetchCall).toContain('f=json');
-      expect(fetchCall).toContain('s='); // Salt should be present
-      expect(fetchCall).toContain('t='); // Token should be present
+
+      expect(fetchCall).toContain("u=testuser");
+      expect(fetchCall).toContain("v=1.16.1");
+      expect(fetchCall).toContain("c=subsonicapp");
+      expect(fetchCall).toContain("f=json");
+      expect(fetchCall).toContain("s="); // Salt should be present
+      expect(fetchCall).toContain("t="); // Token should be present
 
       // Restore Math.random
       Math.random = originalMathRandom;
     });
 
-    it('should handle authentication failures in API responses', async () => {
+    it("should handle authentication failures in API responses", async () => {
       const mockAuthErrorResponse = {
-        'subsonic-response': {
-          status: 'failed',
+        "subsonic-response": {
+          status: "failed",
           error: {
             code: 40,
-            message: 'Wrong username or password',
+            message: "Wrong username or password",
           },
         },
       };
@@ -452,8 +455,8 @@ describe('Music Player Store - Data Fetching', () => {
       await store.fetchSongs();
 
       const currentState = useMusicPlayerStore.getState();
-      
-      expect(currentState.error).toBe('Wrong username or password');
+
+      expect(currentState.error).toBe("Wrong username or password");
       expect(currentState.isLoading).toBe(false);
       expect(currentState.songs).toEqual([]);
     });

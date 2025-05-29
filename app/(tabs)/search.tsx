@@ -260,8 +260,8 @@ export default function SearchScreen() {
             onPress={() => handlePlaySong(item.data)}
           >
             {playback.currentSong &&
-              playback.currentSong.id === item.data.id &&
-              playback.isPlaying ? (
+            playback.currentSong.id === item.data.id &&
+            playback.isPlaying ? (
               <Pause size={18} color={colors.text} />
             ) : (
               <Play size={18} color={colors.text} />

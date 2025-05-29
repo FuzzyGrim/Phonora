@@ -174,7 +174,7 @@ export default function HomeScreen() {
                   onPress={() => handlePlayPress(song)}
                 >
                   {playback.currentSong?.id === song.id &&
-                    playback.isPlaying ? (
+                  playback.isPlaying ? (
                     <Pause size={16} color={colors.text} />
                   ) : (
                     <Play size={16} color={colors.text} />

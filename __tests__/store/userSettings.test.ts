@@ -1,13 +1,13 @@
-import { useMusicPlayerStore } from '../../store/musicPlayerStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { UserSettings } from '../../store/musicPlayerStore';
+import { useMusicPlayerStore } from "../../store/musicPlayerStore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { UserSettings } from "../../store/musicPlayerStore";
 
 // Mock dependencies
-jest.mock('@react-native-async-storage/async-storage');
+jest.mock("@react-native-async-storage/async-storage");
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
-describe('Music Player Store - User Settings', () => {
+describe("Music Player Store - User Settings", () => {
   beforeEach(() => {
     // Reset store state
     useMusicPlayerStore.setState({
@@ -17,8 +17,8 @@ describe('Music Player Store - User Settings', () => {
     jest.clearAllMocks();
   });
 
-  describe('setUserSettings', () => {
-    it('should save user settings to AsyncStorage and update state', async () => {
+  describe("setUserSettings", () => {
+    it("should save user settings to AsyncStorage and update state", async () => {
       const newSettings: UserSettings = {
         offlineMode: true,
         maxCacheSize: 5,
@@ -30,22 +30,22 @@ describe('Music Player Store - User Settings', () => {
       await store.setUserSettings(newSettings);
 
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        'user_settings',
-        JSON.stringify(newSettings)
+        "user_settings",
+        JSON.stringify(newSettings),
       );
 
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.userSettings).toEqual(newSettings);
     });
 
-    it('should handle AsyncStorage errors gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    it("should handle AsyncStorage errors gracefully", async () => {
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const newSettings: UserSettings = {
         offlineMode: true,
         maxCacheSize: 15,
       };
 
-      mockAsyncStorage.setItem.mockRejectedValue(new Error('Storage error'));
+      mockAsyncStorage.setItem.mockRejectedValue(new Error("Storage error"));
 
       const store = useMusicPlayerStore.getState();
       await store.setUserSettings(newSettings);
@@ -56,13 +56,16 @@ describe('Music Player Store - User Settings', () => {
         offlineMode: false,
         maxCacheSize: 10,
       });
-      
-      expect(consoleSpy).toHaveBeenCalledWith('Error saving settings:', expect.any(Error));
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error saving settings:",
+        expect.any(Error),
+      );
 
       consoleSpy.mockRestore();
     });
 
-    it('should handle offline mode setting changes', async () => {
+    it("should handle offline mode setting changes", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -86,7 +89,7 @@ describe('Music Player Store - User Settings', () => {
       expect(currentState.userSettings.offlineMode).toBe(false);
     });
 
-    it('should handle cache size setting changes', async () => {
+    it("should handle cache size setting changes", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -107,7 +110,7 @@ describe('Music Player Store - User Settings', () => {
       expect(mockAsyncStorage.setItem).toHaveBeenCalledTimes(testSizes.length);
     });
 
-    it('should preserve existing settings when updating partial settings', async () => {
+    it("should preserve existing settings when updating partial settings", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -136,8 +139,8 @@ describe('Music Player Store - User Settings', () => {
     });
   });
 
-  describe('User Settings Integration with App Initialization', () => {
-    it('should load user settings during store initialization', async () => {
+  describe("User Settings Integration with App Initialization", () => {
+    it("should load user settings during store initialization", async () => {
       const savedSettings: UserSettings = {
         offlineMode: true,
         maxCacheSize: 25,
@@ -156,10 +159,10 @@ describe('Music Player Store - User Settings', () => {
 
       const currentState = useMusicPlayerStore.getState();
       expect(currentState.userSettings).toEqual(savedSettings);
-      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('user_settings');
+      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith("user_settings");
     });
 
-    it('should use default settings when no saved settings exist', async () => {
+    it("should use default settings when no saved settings exist", async () => {
       mockAsyncStorage.getItem.mockResolvedValue(null);
 
       // Reset store state
@@ -177,11 +180,11 @@ describe('Music Player Store - User Settings', () => {
       });
     });
 
-    it('should handle corrupted user settings data gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      
+    it("should handle corrupted user settings data gracefully", async () => {
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
       // Mock corrupted JSON data
-      mockAsyncStorage.getItem.mockResolvedValue('invalid json data');
+      mockAsyncStorage.getItem.mockResolvedValue("invalid json data");
 
       const store = useMusicPlayerStore.getState();
       await store.initializeStore();
@@ -197,17 +200,17 @@ describe('Music Player Store - User Settings', () => {
     });
   });
 
-  describe('User Settings Validation', () => {
-    it('should handle edge cases for cache size values', async () => {
+  describe("User Settings Validation", () => {
+    it("should handle edge cases for cache size values", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
 
       // Test edge cases
       const edgeCases = [
-        { offlineMode: false, maxCacheSize: 0 },     // Disabled caching
-        { offlineMode: true, maxCacheSize: 0.5 },    // Fractional GB
-        { offlineMode: false, maxCacheSize: 1000 },  // Very large cache
+        { offlineMode: false, maxCacheSize: 0 }, // Disabled caching
+        { offlineMode: true, maxCacheSize: 0.5 }, // Fractional GB
+        { offlineMode: false, maxCacheSize: 1000 }, // Very large cache
       ];
 
       for (const settings of edgeCases) {
@@ -218,7 +221,7 @@ describe('Music Player Store - User Settings', () => {
       }
     });
 
-    it('should maintain settings state consistency', async () => {
+    it("should maintain settings state consistency", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -237,12 +240,14 @@ describe('Music Player Store - User Settings', () => {
         expect(currentState.userSettings).toEqual(settings);
       }
 
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledTimes(settingsSequence.length);
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledTimes(
+        settingsSequence.length,
+      );
     });
   });
 
-  describe('Settings and Authentication Interaction', () => {
-    it('should preserve user settings during authentication changes', async () => {
+  describe("Settings and Authentication Interaction", () => {
+    it("should preserve user settings during authentication changes", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -258,10 +263,10 @@ describe('Music Player Store - User Settings', () => {
       // Simulate authentication state changes
       useMusicPlayerStore.setState({
         config: {
-          serverUrl: 'https://test.com',
-          username: 'user',
-          password: 'pass',
-          version: '1.16.1',
+          serverUrl: "https://test.com",
+          username: "user",
+          password: "pass",
+          version: "1.16.1",
         },
         isAuthenticated: true,
       });
@@ -278,7 +283,7 @@ describe('Music Player Store - User Settings', () => {
       expect(currentState.userSettings).toEqual(customSettings);
     });
 
-    it('should handle concurrent authentication and settings operations', async () => {
+    it("should handle concurrent authentication and settings operations", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -289,10 +294,10 @@ describe('Music Player Store - User Settings', () => {
       });
 
       const configPromise = store.setConfig({
-        serverUrl: 'https://test.com',
-        username: 'user',
-        password: 'pass',
-        version: '1.16.1',
+        serverUrl: "https://test.com",
+        username: "user",
+        password: "pass",
+        version: "1.16.1",
       });
 
       await Promise.all([settingsPromise, configPromise]);
@@ -306,8 +311,8 @@ describe('Music Player Store - User Settings', () => {
     });
   });
 
-  describe('Settings Persistence', () => {
-    it('should save settings with correct JSON format', async () => {
+  describe("Settings Persistence", () => {
+    it("should save settings with correct JSON format", async () => {
       mockAsyncStorage.setItem.mockResolvedValue();
 
       const store = useMusicPlayerStore.getState();
@@ -320,8 +325,8 @@ describe('Music Player Store - User Settings', () => {
       await store.setUserSettings(settings);
 
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        'user_settings',
-        JSON.stringify(settings)
+        "user_settings",
+        JSON.stringify(settings),
       );
 
       // Verify the JSON format
@@ -330,7 +335,7 @@ describe('Music Player Store - User Settings', () => {
       expect(parsedData).toEqual(settings);
     });
 
-    it('should handle settings persistence across app restarts', async () => {
+    it("should handle settings persistence across app restarts", async () => {
       // Simulate app restart by resetting store and loading settings
       const persistedSettings: UserSettings = {
         offlineMode: true,
@@ -349,7 +354,9 @@ describe('Music Player Store - User Settings', () => {
       });
 
       // Second session: load settings
-      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(persistedSettings));
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify(persistedSettings),
+      );
       await store.initializeStore();
 
       const currentState = useMusicPlayerStore.getState();
