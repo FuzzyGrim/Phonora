@@ -4,6 +4,7 @@ import md5 from "md5";
 import { createAudioPlayer, setAudioModeAsync, AudioStatus } from "expo-audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
+import NetInfo from "@react-native-community/netinfo";
 
 // Define a single cache directory for all files
 const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
@@ -82,6 +83,15 @@ export interface UserSettings {
 }
 
 /**
+ * Network state information
+ */
+interface NetworkState {
+  isConnected: boolean;
+  isInternetReachable: boolean | null;
+  type: string | null;
+}
+
+/**
  * Complete state and actions for the Subsonic store
  */
 interface MusicPlayerState {
@@ -89,6 +99,7 @@ interface MusicPlayerState {
   config: SubsonicConfig | null;
   isAuthenticated: boolean;
   songs: Song[];
+  cachedSongs: Song[]; // Songs that are available offline
   userSettings: UserSettings;
   isLoading: boolean;
   error: string | null;
@@ -102,6 +113,8 @@ interface MusicPlayerState {
   isRepeat: boolean;
   isShuffle: boolean;
   repeatMode: "off" | "one" | "all";
+  networkState: NetworkState;
+  isOfflineMode: boolean; // Combined state of manual setting and network connectivity
 
   // Authentication actions
   setConfig: (config: SubsonicConfig) => void;
@@ -158,6 +171,12 @@ interface MusicPlayerState {
   >;
   freeUpCacheSpace: (requiredSpace: number) => Promise<number>;
 
+  // Network and offline management
+  initializeNetworkMonitoring: () => void;
+  updateNetworkState: (networkState: NetworkState) => void;
+  loadCachedSongs: () => Promise<void>;
+  getAvailableSongs: () => Song[];
+
   // Initialization
   initializeStore: () => Promise<void>;
 
@@ -180,6 +199,7 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   config: null,
   isAuthenticated: false,
   songs: [],
+  cachedSongs: [],
   userSettings: DEFAULT_USER_SETTINGS,
   isLoading: false,
   isSearching: false,
@@ -189,6 +209,12 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
   isRepeat: false,
   isShuffle: false,
   repeatMode: "off",
+  networkState: {
+    isConnected: true,
+    isInternetReachable: null,
+    type: null,
+  },
+  isOfflineMode: false,
   playback: {
     isPlaying: false,
     currentSong: null,
@@ -216,8 +242,14 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
         set({ userSettings: JSON.parse(settings) });
       }
 
-      // If we have credentials, fetch songs automatically
-      if (get().isAuthenticated) {
+      // Initialize network monitoring
+      get().initializeNetworkMonitoring();
+
+      // Load cached songs for offline mode
+      await get().loadCachedSongs();
+
+      // If we have credentials, fetch songs automatically (only if online)
+      if (get().isAuthenticated && !get().isOfflineMode) {
         get().fetchSongs();
       }
     } catch (error) {
@@ -810,6 +842,9 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
           }),
         );
         set({ songs, isLoading: false });
+
+        // Update cached songs list after fetching new songs
+        get().loadCachedSongs();
       } else {
         throw new Error(
           data["subsonic-response"].error?.message || "Failed to fetch songs",
@@ -1375,5 +1410,113 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // If enabling shuffle, disable repeat
       isRepeat: !state.isShuffle ? false : state.isRepeat,
     }));
+  },
+
+  /**
+   * Initialize network monitoring
+   */
+  initializeNetworkMonitoring: () => {
+    try {
+      // Get initial network state and set up listener
+      NetInfo.fetch().then((networkState) => {
+        const initialNetworkState: NetworkState = {
+          isConnected: networkState.isConnected ?? false,
+          isInternetReachable: networkState.isInternetReachable,
+          type: networkState.type,
+        };
+
+        // Update store with initial state
+        get().updateNetworkState(initialNetworkState);
+      });
+
+      // Set up listener for network changes
+      NetInfo.addEventListener((state) => {
+        const newNetworkState: NetworkState = {
+          isConnected: state.isConnected ?? false,
+          isInternetReachable: state.isInternetReachable,
+          type: state.type,
+        };
+        get().updateNetworkState(newNetworkState);
+      });
+    } catch (error) {
+      console.error("Error initializing network monitoring:", error);
+    }
+  },
+
+  /**
+   * Update network state and handle offline mode automatically
+   */
+  updateNetworkState: (networkState: NetworkState) => {
+    const { userSettings } = get();
+
+    // Check if we have no internet connection
+    const hasNoInternet =
+      !networkState.isConnected || networkState.isInternetReachable === false;
+
+    // Auto-enable offline mode when no internet connection
+    const shouldBeOffline = userSettings.offlineMode || hasNoInternet;
+
+    // If we're going offline due to network issues and offline mode isn't already enabled in settings,
+    // automatically enable it in the user settings
+    if (hasNoInternet && !userSettings.offlineMode) {
+      const updatedSettings = {
+        ...userSettings,
+        offlineMode: true,
+      };
+
+      // Update settings both in state and storage
+      get().setUserSettings(updatedSettings);
+      console.log(
+        "Automatically enabled offline mode due to no internet connection",
+      );
+    }
+
+    set({
+      networkState,
+      isOfflineMode: shouldBeOffline,
+    });
+
+    // If we just went offline, load cached songs
+    if (shouldBeOffline) {
+      get().loadCachedSongs();
+    }
+
+    console.log("Network state updated:", {
+      isConnected: networkState.isConnected,
+      isInternetReachable: networkState.isInternetReachable,
+      isOfflineMode: shouldBeOffline,
+      offlineModeInSettings: userSettings.offlineMode,
+    });
+  },
+
+  /**
+   * Load songs that are available in cache for offline use
+   */
+  loadCachedSongs: async () => {
+    try {
+      const { songs } = get();
+      const cachedSongs: Song[] = [];
+
+      // Check which songs from our library are cached
+      for (const song of songs) {
+        const isSongCached = await get().isFileCached(song.id, "mp3");
+        if (isSongCached) {
+          cachedSongs.push(song);
+        }
+      }
+
+      set({ cachedSongs });
+      console.log(`Loaded ${cachedSongs.length} cached songs for offline use`);
+    } catch (error) {
+      console.error("Error loading cached songs:", error);
+    }
+  },
+
+  /**
+   * Get songs available based on current mode (online/offline)
+   */
+  getAvailableSongs: () => {
+    const { isOfflineMode, songs, cachedSongs } = get();
+    return isOfflineMode ? cachedSongs : songs;
   },
 }));

@@ -25,7 +25,7 @@ import { router } from "expo-router";
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
-  const { config, setConfig, userSettings, setUserSettings } =
+  const { config, setConfig, userSettings, setUserSettings, networkState } =
     useMusicPlayerStore();
   const [serverUrl, setServerUrl] = useState(config?.serverUrl || "");
   const [username, setUsername] = useState(config?.username || "");
@@ -61,6 +61,11 @@ export default function SettingsScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [offlineMode, maxCacheSize, setUserSettings]);
+
+  // Sync local state when userSettings changes (e.g., when loaded from storage or auto-updated)
+  useEffect(() => {
+    setOfflineMode(userSettings.offlineMode);
+  }, [userSettings.offlineMode]);
 
   // Sync local state when userSettings changes (e.g., when loaded from storage)
   useEffect(() => {
@@ -157,6 +162,8 @@ export default function SettingsScreen() {
 
   const toggleOfflineMode = (value: boolean) => {
     setOfflineMode(value);
+    // Note: If user disables offline mode while having no internet,
+    // the updateNetworkState function will re-enable it automatically
   };
 
   const incrementCacheSize = () => {
@@ -328,6 +335,28 @@ export default function SettingsScreen() {
                 When enabled, the app will use only cached content when no
                 internet connection is available
               </Text>
+              {!networkState.isConnected && offlineMode && (
+                <Text
+                  style={[
+                    styles.helperText,
+                    { color: colors.primary, marginTop: 8 },
+                  ]}
+                >
+                  ⚠️ Offline mode automatically enabled due to no internet
+                  connection
+                </Text>
+              )}
+              {!networkState.isConnected && !offlineMode && (
+                <Text
+                  style={[
+                    styles.helperText,
+                    { color: colors.error, marginTop: 8 },
+                  ]}
+                >
+                  ⚠️ No internet connection detected. Offline mode will be
+                  re-enabled automatically.
+                </Text>
+              )}
             </View>
           </View>
 

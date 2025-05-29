@@ -1,6 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store/musicPlayerStore";
-import { Music2, Pause, Play } from "lucide-react-native";
+import { Music2, Pause, Play, WifiOff } from "lucide-react-native";
 import React from "react";
 import {
   ActivityIndicator,
@@ -22,7 +22,6 @@ function formatDuration(seconds: number) {
 export default function HomeScreen() {
   const { colors } = useTheme();
   const {
-    songs,
     isLoading,
     error,
     fetchSongs,
@@ -31,14 +30,22 @@ export default function HomeScreen() {
     resumeSong,
     playback,
     playSongFromSource,
+    isOfflineMode,
+    networkState,
+    getAvailableSongs,
   } = useMusicPlayerStore();
   const [refreshing, setRefreshing] = React.useState(false);
 
+  // Get available songs based on current mode (online/offline)
+  const availableSongs = getAvailableSongs();
+
   const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await fetchSongs();
-    setRefreshing(false);
-  }, [fetchSongs]);
+    if (!isOfflineMode) {
+      setRefreshing(true);
+      await fetchSongs();
+      setRefreshing(false);
+    }
+  }, [fetchSongs, isOfflineMode]);
 
   const handlePlayPress = async (song: any) => {
     if (playback.currentSong?.id === song.id) {
@@ -49,8 +56,21 @@ export default function HomeScreen() {
       }
     } else {
       // Use playSongFromSource instead to set up the playlist properly
-      await playSongFromSource(song, "library", songs);
+      await playSongFromSource(song, "library", availableSongs);
     }
+  };
+
+  const getCoverImageSource = (song: any) => {
+    if (!song.coverArt) return null;
+
+    // In offline mode, try to use cached image path
+    if (isOfflineMode) {
+      // For now, we'll fall back to the URL - in production you might want to
+      // track which images are cached and use local paths when available
+      return { uri: getCoverArtUrl(song.coverArt) };
+    }
+
+    return { uri: getCoverArtUrl(song.coverArt) };
   };
 
   if (isLoading && !refreshing) {
@@ -93,24 +113,63 @@ export default function HomeScreen() {
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          enabled={!isOfflineMode}
+        />
       }
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Your Music</Text>
+        <View style={styles.headerContent}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isOfflineMode ? "Offline Music" : "Your Music"}
+          </Text>
+          {isOfflineMode && (
+            <View style={styles.offlineIndicator}>
+              <WifiOff size={16} color={colors.textSecondary} />
+              <Text
+                style={[styles.offlineText, { color: colors.textSecondary }]}
+              >
+                Offline
+              </Text>
+            </View>
+          )}
+        </View>
+        {!networkState.isConnected && (
+          <View
+            style={[styles.networkBanner, { backgroundColor: colors.error }]}
+          >
+            <Text style={[styles.networkBannerText, { color: colors.text }]}>
+              No internet connection. Offline mode enabled automatically.
+            </Text>
+          </View>
+        )}
       </View>
       <View style={styles.content}>
-        {songs.length === 0 ? (
+        {availableSongs.length === 0 ? (
           <View style={styles.emptyState}>
             <Music2 size={48} color={colors.textSecondary} />
             <Text
               style={[styles.emptyStateText, { color: colors.textSecondary }]}
             >
-              No songs available
+              {isOfflineMode
+                ? "No cached songs available for offline playback"
+                : "No songs available"}
             </Text>
+            {isOfflineMode && (
+              <Text
+                style={[
+                  styles.emptyStateSubtext,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Connect to the internet to browse and cache music
+              </Text>
+            )}
           </View>
         ) : (
-          songs.map((song) => (
+          availableSongs.map((song) => (
             <TouchableOpacity
               key={song.id}
               style={[
@@ -125,9 +184,9 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              {song.coverArt ? (
+              {song.coverArt && getCoverImageSource(song) ? (
                 <Image
-                  source={{ uri: getCoverArtUrl(song.coverArt) }}
+                  source={getCoverImageSource(song)!}
                   style={styles.coverArt}
                 />
               ) : (
@@ -173,12 +232,14 @@ export default function HomeScreen() {
                   ]}
                   onPress={() => handlePlayPress(song)}
                 >
-                  {playback.currentSong?.id === song.id &&
-                  playback.isPlaying ? (
-                    <Pause size={16} color={colors.text} />
-                  ) : (
-                    <Play size={16} color={colors.text} />
-                  )}
+                  {(() => {
+                    const isCurrentSong = playback.currentSong?.id === song.id;
+                    return isCurrentSong && playback.isPlaying ? (
+                      <Pause size={16} color={colors.text} />
+                    ) : (
+                      <Play size={16} color={colors.text} />
+                    );
+                  })()}
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -201,9 +262,34 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   title: {
     fontSize: 32,
     fontFamily: "Inter-Bold",
+  },
+  offlineIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  offlineText: {
+    fontSize: 12,
+    fontFamily: "Inter-Regular",
+  },
+  networkBanner: {
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  networkBannerText: {
+    fontSize: 14,
+    fontFamily: "Inter-SemiBold",
+    textAlign: "center",
   },
   content: {
     padding: 20,
@@ -285,5 +371,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter-Regular",
     marginTop: 16,
+    textAlign: "center",
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    fontFamily: "Inter-Regular",
+    marginTop: 8,
+    textAlign: "center",
   },
 });
