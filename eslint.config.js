@@ -1,29 +1,22 @@
-const { FlatCompat } = require("@eslint/eslintrc");
-const js = require("@eslint/js");
-const prettier = require("eslint-plugin-prettier");
+const { defineConfig } = require('eslint/config');
+const expoConfig = require("eslint-config-expo/flat");
+const prettierPlugin = require("eslint-plugin-prettier");
+const reactPlugin = require("eslint-plugin-react");
+const reactNativePlugin = require("eslint-plugin-react-native");
 
-const compat = new FlatCompat({
-  recommendedConfig: js.configs.recommended,
-});
-
-module.exports = [
-  // Extend Expo and Prettier configs
-  ...compat.extends("expo", "prettier"),
-
+module.exports = defineConfig([
+  expoConfig,
   {
+    ignores: ['dist', 'node_modules', 'eslint.config.mjs'],
     plugins: {
-      prettier,
+      react: reactPlugin,
+      'react-native': reactNativePlugin,
+      prettier: prettierPlugin,
     },
-
     rules: {
-      "prettier/prettier": [
-        "error",
-        {
-          endOfLine: "auto",
-        },
-      ],
+      ...reactPlugin.configs.recommended.rules,
+      ...reactNativePlugin.configs.all.rules,
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
-
-    ignores: ["/dist/*"],
-  },
-];
+  }
+]);
