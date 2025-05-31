@@ -8,7 +8,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useEffect } from "react";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 
 export default function RootLayout() {
   const { initializeStore } = useMusicPlayerStore();

@@ -1,456 +1,279 @@
-import { useMusicPlayerStore } from "../../store/musicPlayerStore";
-import * as SecureStore from "expo-secure-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+/**
+ * Tests for store/auth.ts
+ */
 
-// Mock dependencies
-jest.mock("expo-secure-store");
-jest.mock("@react-native-async-storage/async-storage");
-jest.mock("expo-file-system");
-jest.mock("expo-audio");
-jest.mock("md5", () => ({
-  __esModule: true,
-  default: jest.fn((input: string) => `hashed_${input}`),
-}));
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import md5 from 'md5';
+import { createAuthSlice } from '../../store/auth';
+import { SubsonicConfig, DEFAULT_USER_SETTINGS } from '../../store/types';
 
-// Mock fetch
-global.fetch = jest.fn();
+// Mock the dependencies
+jest.mock('expo-secure-store');
+jest.mock('@react-native-async-storage/async-storage');
+jest.mock('md5');
 
 const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
+const mockMd5 = md5 as jest.MockedFunction<typeof md5>;
 
-describe("Music Player Store - Authentication", () => {
+describe('Auth Slice', () => {
+  let authSlice: any;
+  let mockSet: jest.Mock;
+  let mockGet: jest.Mock;
+
+  const mockConfig: SubsonicConfig = {
+    serverUrl: 'http://localhost:4533',
+    username: 'testuser',
+    password: 'testpass',
+    version: '1.16.1',
+  };
+
   beforeEach(() => {
-    // Reset store state before each test
-    useMusicPlayerStore.setState({
-      config: null,
-      isAuthenticated: false,
-      songs: [],
-      userSettings: { offlineMode: false, maxCacheSize: 10 },
-      isLoading: false,
-      error: null,
-    });
+    mockSet = jest.fn();
+    mockGet = jest.fn();
+    authSlice = createAuthSlice(mockSet, mockGet);
 
-    // Clear all mocks
+    // Reset all mocks
     jest.clearAllMocks();
+
+    // Setup default mock returns
+    mockGet.mockReturnValue({
+      config: null,
+      userSettings: DEFAULT_USER_SETTINGS,
+    });
   });
 
-  describe("initializeStore", () => {
-    it("should load credentials from secure storage and set authenticated state", async () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
+  describe('Initial State', () => {
+    it('should have correct initial state', () => {
+      expect(authSlice.config).toBeNull();
+      expect(authSlice.isAuthenticated).toBe(false);
+      expect(authSlice.userSettings).toEqual(DEFAULT_USER_SETTINGS);
+    });
+  });
 
-      const mockUserSettings = {
-        offlineMode: true,
-        maxCacheSize: 5,
-      };
+  describe('initializeAuth', () => {
+    it('should load credentials and settings successfully', async () => {
+      const mockCredentials = JSON.stringify(mockConfig);
+      const mockSettings = JSON.stringify({ offlineMode: true, maxCacheSize: 5 });
 
-      mockSecureStore.getItemAsync.mockResolvedValue(
-        JSON.stringify(mockConfig),
-      );
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify(mockUserSettings),
-      );
+      mockSecureStore.getItemAsync.mockResolvedValue(mockCredentials);
+      mockAsyncStorage.getItem.mockResolvedValue(mockSettings);
 
-      // Mock fetchSongs method on the store
-      const originalFetchSongs = useMusicPlayerStore.getState().fetchSongs;
-      const mockFetchSongs = jest.fn().mockResolvedValue(undefined);
-      useMusicPlayerStore.setState({ fetchSongs: mockFetchSongs });
+      await authSlice.initializeAuth();
 
-      const store = useMusicPlayerStore.getState();
-      await store.initializeStore();
-
-      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(
-        "subsonic_credentials",
-      );
-      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith("user_settings");
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toEqual(mockConfig);
-      expect(currentState.isAuthenticated).toBe(true);
-      expect(currentState.userSettings).toEqual(mockUserSettings);
-      expect(mockFetchSongs).toHaveBeenCalled();
-
-      // Restore original function
-      useMusicPlayerStore.setState({ fetchSongs: originalFetchSongs });
+      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith('subsonic_credentials');
+      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('user_settings');
+      expect(mockSet).toHaveBeenCalledWith({
+        config: mockConfig,
+        isAuthenticated: true,
+      });
+      expect(mockSet).toHaveBeenCalledWith({
+        userSettings: { offlineMode: true, maxCacheSize: 5 },
+      });
     });
 
-    it("should handle missing credentials gracefully", async () => {
+    it('should handle missing credentials gracefully', async () => {
       mockSecureStore.getItemAsync.mockResolvedValue(null);
       mockAsyncStorage.getItem.mockResolvedValue(null);
 
-      // Mock fetchSongs to ensure it's not called
-      const mockFetchSongs = jest.fn().mockResolvedValue(undefined);
-      useMusicPlayerStore.setState({ fetchSongs: mockFetchSongs });
+      await authSlice.initializeAuth();
 
-      const store = useMusicPlayerStore.getState();
-      await store.initializeStore();
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toBeNull();
-      expect(currentState.isAuthenticated).toBe(false);
-      expect(mockFetchSongs).not.toHaveBeenCalled();
+      expect(mockSet).not.toHaveBeenCalled();
     });
 
-    it("should handle credentials without user settings", async () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
+    it('should handle errors during initialization', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockSecureStore.getItemAsync.mockRejectedValue(new Error('Storage error'));
 
-      mockSecureStore.getItemAsync.mockResolvedValue(
-        JSON.stringify(mockConfig),
-      );
-      mockAsyncStorage.getItem.mockResolvedValue(null);
+      await authSlice.initializeAuth();
 
-      const mockFetchSongs = jest.fn().mockResolvedValue(undefined);
-      useMusicPlayerStore.setState({ fetchSongs: mockFetchSongs });
-
-      const store = useMusicPlayerStore.getState();
-      await store.initializeStore();
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toEqual(mockConfig);
-      expect(currentState.isAuthenticated).toBe(true);
-      expect(currentState.userSettings).toEqual({
-        offlineMode: false,
-        maxCacheSize: 10,
-      });
-      expect(mockFetchSongs).toHaveBeenCalled();
-    });
-
-    it("should handle storage errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      mockSecureStore.getItemAsync.mockRejectedValue(
-        new Error("Storage error"),
-      );
-
-      const store = useMusicPlayerStore.getState();
-      await store.initializeStore();
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toBeNull();
-      expect(currentState.isAuthenticated).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Error initializing store:",
-        expect.any(Error),
+        'Error initializing authentication:',
+        expect.any(Error)
       );
+      consoleSpy.mockRestore();
+    });
 
+    it('should handle invalid JSON in stored credentials', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockSecureStore.getItemAsync.mockResolvedValue('invalid-json');
+
+      await authSlice.initializeAuth();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error initializing authentication:',
+        expect.any(Error)
+      );
       consoleSpy.mockRestore();
     });
   });
 
-  describe("setConfig", () => {
-    it("should save config to secure storage and set authenticated state", async () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
-
-      mockSecureStore.setItemAsync.mockResolvedValue();
-      const mockFetchSongs = jest.fn().mockResolvedValue(undefined);
-      useMusicPlayerStore.setState({ fetchSongs: mockFetchSongs });
-
-      const store = useMusicPlayerStore.getState();
-      await store.setConfig(mockConfig);
+  describe('setConfig', () => {
+    it('should save config and update state', async () => {
+      await authSlice.setConfig(mockConfig);
 
       expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
-        "subsonic_credentials",
-        JSON.stringify(mockConfig),
+        'subsonic_credentials',
+        JSON.stringify(mockConfig)
       );
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toEqual(mockConfig);
-      expect(currentState.isAuthenticated).toBe(true);
-      expect(mockFetchSongs).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith({
+        config: mockConfig,
+        isAuthenticated: true,
+      });
     });
 
-    it("should handle secure storage errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
+    it('should handle storage errors', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const storageError = new Error('Storage error');
+      mockSecureStore.setItemAsync.mockRejectedValue(storageError);
 
-      mockSecureStore.setItemAsync.mockRejectedValue(
-        new Error("Storage error"),
-      );
+      await expect(authSlice.setConfig(mockConfig)).rejects.toThrow(storageError);
 
-      const store = useMusicPlayerStore.getState();
-      await store.setConfig(mockConfig);
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toBeNull();
-      expect(currentState.isAuthenticated).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error saving credentials:",
-        expect.any(Error),
-      );
-
+      expect(consoleSpy).toHaveBeenCalledWith('Error saving credentials:', storageError);
       consoleSpy.mockRestore();
     });
   });
 
-  describe("clearConfig", () => {
-    it("should remove credentials from secure storage and reset state", async () => {
-      // Set initial authenticated state
-      useMusicPlayerStore.setState({
-        config: {
-          serverUrl: "https://demo.subsonic.org",
-          username: "testuser",
-          password: "testpass",
-          version: "1.16.1",
-        },
-        isAuthenticated: true,
-        songs: [
-          {
-            id: "1",
-            title: "Test Song",
-            artist: "Test Artist",
-            album: "Test Album",
-            duration: 180,
-          },
-        ],
+  describe('clearConfig', () => {
+    it('should clear credentials and reset state', async () => {
+      await authSlice.clearConfig();
+
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('subsonic_credentials');
+      expect(mockSet).toHaveBeenCalledWith({
+        config: null,
+        isAuthenticated: false,
       });
-
-      mockSecureStore.deleteItemAsync.mockResolvedValue();
-
-      const store = useMusicPlayerStore.getState();
-      await store.clearConfig();
-
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
-        "subsonic_credentials",
-      );
-
-      const currentState = useMusicPlayerStore.getState();
-      expect(currentState.config).toBeNull();
-      expect(currentState.isAuthenticated).toBe(false);
-      expect(currentState.songs).toEqual([]);
     });
 
-    it("should handle storage deletion errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      mockSecureStore.deleteItemAsync.mockRejectedValue(
-        new Error("Storage error"),
-      );
+    it('should handle deletion errors', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const deletionError = new Error('Deletion error');
+      mockSecureStore.deleteItemAsync.mockRejectedValue(deletionError);
 
-      const store = useMusicPlayerStore.getState();
-      await store.clearConfig();
+      await expect(authSlice.clearConfig()).rejects.toThrow(deletionError);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error clearing credentials:",
-        expect.any(Error),
-      );
-
+      expect(consoleSpy).toHaveBeenCalledWith('Error clearing credentials:', deletionError);
       consoleSpy.mockRestore();
     });
   });
 
-  describe("generateAuthParams", () => {
-    it("should generate correct authentication parameters when config exists", () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
+  describe('setUserSettings', () => {
+    it('should save settings and update state', async () => {
+      const newSettings = { offlineMode: true, maxCacheSize: 15 };
 
-      useMusicPlayerStore.setState({
-        config: mockConfig,
-        isAuthenticated: true,
-      });
+      await authSlice.setUserSettings(newSettings);
 
-      // Mock Math.random to get predictable salt
-      const originalMathRandom = Math.random;
-      Math.random = jest.fn(() => 0.123456789);
-
-      const store = useMusicPlayerStore.getState();
-      const authParams = store.generateAuthParams();
-
-      Math.random = jest.fn(() => 0.123456789); // Reset for consistent salt
-      const consistentSalt = Math.random().toString(36).substring(2);
-
-      expect(authParams.get("u")).toBe("testuser");
-      expect(authParams.get("s")).toBe(consistentSalt);
-      expect(authParams.get("v")).toBe("1.16.1");
-      expect(authParams.get("c")).toBe("subsonicapp");
-      expect(authParams.get("f")).toBe("json");
-
-      // Restore Math.random
-      Math.random = originalMathRandom;
-    });
-
-    it("should return empty URLSearchParams when no config exists", () => {
-      useMusicPlayerStore.setState({
-        config: null,
-        isAuthenticated: false,
-      });
-
-      const store = useMusicPlayerStore.getState();
-      const authParams = store.generateAuthParams();
-
-      expect(authParams.toString()).toBe("");
-    });
-
-    it("should generate different salts on multiple calls", () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
-
-      useMusicPlayerStore.setState({
-        config: mockConfig,
-        isAuthenticated: true,
-      });
-
-      const store = useMusicPlayerStore.getState();
-      const authParams1 = store.generateAuthParams();
-      const authParams2 = store.generateAuthParams();
-
-      // Salts should be different (since Math.random is not mocked here)
-      expect(authParams1.get("s")).not.toBe(authParams2.get("s"));
-      // But tokens should also be different due to different salts
-      expect(authParams1.get("t")).not.toBe(authParams2.get("t"));
-      // Other parameters should be the same
-      expect(authParams1.get("u")).toBe(authParams2.get("u"));
-      expect(authParams1.get("v")).toBe(authParams2.get("v"));
-    });
-  });
-
-  describe("getCoverArtUrl", () => {
-    it("should generate correct cover art URL when config exists", () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
-
-      useMusicPlayerStore.setState({
-        config: mockConfig,
-        isAuthenticated: true,
-      });
-
-      const store = useMusicPlayerStore.getState();
-      const coverArtUrl = store.getCoverArtUrl("cover123");
-
-      expect(coverArtUrl).toContain(
-        "https://demo.subsonic.org/rest/getCoverArt.view",
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        'user_settings',
+        JSON.stringify(newSettings)
       );
-      expect(coverArtUrl).toContain("id=cover123");
-      expect(coverArtUrl).toContain("u=testuser");
-      expect(coverArtUrl).toContain("v=1.16.1");
-      expect(coverArtUrl).toContain("c=subsonicapp");
-      expect(coverArtUrl).toContain("f=json");
+      expect(mockSet).toHaveBeenCalledWith({ userSettings: newSettings });
     });
 
-    it("should return empty string when no config exists", () => {
-      useMusicPlayerStore.setState({
-        config: null,
-        isAuthenticated: false,
-      });
+    it('should handle storage errors', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const storageError = new Error('Storage error');
+      mockAsyncStorage.setItem.mockRejectedValue(storageError);
 
-      const store = useMusicPlayerStore.getState();
-      const coverArtUrl = store.getCoverArtUrl("cover123");
+      await expect(authSlice.setUserSettings({ offlineMode: true, maxCacheSize: 5 }))
+        .rejects.toThrow(storageError);
 
-      expect(coverArtUrl).toBe("");
+      expect(consoleSpy).toHaveBeenCalledWith('Error saving settings:', storageError);
+      consoleSpy.mockRestore();
     });
   });
 
-  describe("getStreamUrl", () => {
-    it("should generate correct stream URL when config exists", () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
-
-      useMusicPlayerStore.setState({
-        config: mockConfig,
-        isAuthenticated: true,
-      });
-
-      const store = useMusicPlayerStore.getState();
-      const streamUrl = store.getStreamUrl("song123");
-
-      expect(streamUrl).toContain("https://demo.subsonic.org/rest/stream.view");
-      expect(streamUrl).toContain("id=song123");
-      expect(streamUrl).toContain("u=testuser");
-      expect(streamUrl).toContain("v=1.16.1");
-      expect(streamUrl).toContain("c=subsonicapp");
-      expect(streamUrl).toContain("f=json");
+  describe('generateAuthParams', () => {
+    beforeEach(() => {
+      // Mock Math.random for consistent salt generation
+      jest.spyOn(Math, 'random').mockReturnValue(0.123456789);
+      mockMd5.mockReturnValue('mocked-token');
     });
 
-    it("should return empty string when no config exists", () => {
-      useMusicPlayerStore.setState({
-        config: null,
-        isAuthenticated: false,
-      });
-
-      const store = useMusicPlayerStore.getState();
-      const streamUrl = store.getStreamUrl("song123");
-
-      expect(streamUrl).toBe("");
+    afterEach(() => {
+      jest.restoreAllMocks();
     });
-  });
 
-  describe("Authentication Integration", () => {
-    it("should maintain authentication state across store operations", async () => {
-      const mockConfig = {
-        serverUrl: "https://demo.subsonic.org",
-        username: "testuser",
-        password: "testpass",
-        version: "1.16.1",
-      };
+    it('should generate correct auth parameters when config exists', () => {
+      mockGet.mockReturnValue({ config: mockConfig });
 
-      // Mock storage operations
-      mockSecureStore.setItemAsync.mockResolvedValue();
-      mockSecureStore.getItemAsync.mockResolvedValue(
-        JSON.stringify(mockConfig),
+      // Mock Math.random to return a predictable value
+      const mockMathRandom = jest.spyOn(Math, 'random').mockReturnValue(0.123456789);
+
+      const params = authSlice.generateAuthParams();
+
+      // The salt will be generated from Math.random().toString(36).substring(2)
+      const expectedSalt = (0.123456789).toString(36).substring(2);
+      expect(mockMd5).toHaveBeenCalledWith(`testpass${expectedSalt}`);
+      expect(params.toString()).toBe(
+        `u=testuser&t=mocked-token&s=${expectedSalt}&v=1.16.1&c=subsonicapp&f=json`
       );
-      const mockFetchSongs = jest.fn().mockResolvedValue(undefined);
-      useMusicPlayerStore.setState({ fetchSongs: mockFetchSongs });
 
-      const store = useMusicPlayerStore.getState();
+      mockMathRandom.mockRestore();
+    });
 
-      // Set config
-      await store.setConfig(mockConfig);
-      expect(useMusicPlayerStore.getState().isAuthenticated).toBe(true);
-      expect(useMusicPlayerStore.getState().config).toEqual(mockConfig);
+    it('should return empty params when no config exists', () => {
+      mockGet.mockReturnValue({ config: null });
 
-      // Verify auth params work
-      const authParams = store.generateAuthParams();
-      expect(authParams.get("u")).toBe("testuser");
+      const params = authSlice.generateAuthParams();
 
-      // Verify URLs can be generated
-      const streamUrl = store.getStreamUrl("test");
-      const coverArtUrl = store.getCoverArtUrl("test");
+      expect(params.toString()).toBe('');
+      expect(mockMd5).not.toHaveBeenCalled();
+    });
 
-      expect(streamUrl).not.toBe("");
-      expect(coverArtUrl).not.toBe("");
+    it('should generate different salts on multiple calls', () => {
+      mockGet.mockReturnValue({ config: mockConfig });
 
-      // Clear config
-      mockSecureStore.deleteItemAsync.mockResolvedValue();
-      await store.clearConfig();
+      // Mock different random values
+      const mockMathRandom = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(0.123456789)
+        .mockReturnValueOnce(0.987654321);
 
-      expect(useMusicPlayerStore.getState().isAuthenticated).toBe(false);
-      expect(useMusicPlayerStore.getState().config).toBeNull();
+      const params1 = authSlice.generateAuthParams();
+      const params2 = authSlice.generateAuthParams();
 
-      // Verify auth params return empty after clearing
-      const emptyAuthParams = store.generateAuthParams();
-      expect(emptyAuthParams.toString()).toBe("");
+      const expectedSalt1 = (0.123456789).toString(36).substring(2);
+      const expectedSalt2 = (0.987654321).toString(36).substring(2);
+
+      expect(params1.get('s')).toBe(expectedSalt1);
+      expect(params2.get('s')).toBe(expectedSalt2);
+      expect(params1.get('s')).not.toBe(params2.get('s'));
+
+      mockMathRandom.mockRestore();
+    });
+
+    it('should use correct client parameters', () => {
+      mockGet.mockReturnValue({ config: mockConfig });
+
+      const params = authSlice.generateAuthParams();
+
+      expect(params.get('c')).toBe('subsonicapp');
+      expect(params.get('f')).toBe('json');
+      expect(params.get('v')).toBe('1.16.1');
+    });
+  });
+
+  describe('Security', () => {
+    it('should not expose password in generated parameters', () => {
+      mockGet.mockReturnValue({ config: mockConfig });
+
+      const params = authSlice.generateAuthParams();
+      const paramString = params.toString();
+
+      expect(paramString).not.toContain('testpass');
+      expect(paramString).not.toContain('password');
+    });
+
+    it('should generate random salt for each request', () => {
+      mockGet.mockReturnValue({ config: mockConfig });
+
+      const params1 = authSlice.generateAuthParams();
+      const params2 = authSlice.generateAuthParams();
+
+      // Even with mocked Math.random, the salt should be included
+      expect(params1.has('s')).toBe(true);
+      expect(params2.has('s')).toBe(true);
     });
   });
 });

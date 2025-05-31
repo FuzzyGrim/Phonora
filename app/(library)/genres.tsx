@@ -10,14 +10,9 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Tag } from "lucide-react-native";
 import { router } from "expo-router";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
-
-interface Genre {
-  id: string;
-  name: string;
-  songCount: number;
-}
+import { Genre } from "@/store/types";
 
 export default function GenresScreen() {
   const { colors } = useTheme();
@@ -25,74 +20,31 @@ export default function GenresScreen() {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Access config and utility functions from the store using shallow equality
-  const { config, generateAuthParams } = useMusicPlayerStore(
+  // Access fetchGenres from the store using shallow equality
+  const { fetchGenres } = useMusicPlayerStore(
     useShallow((state) => ({
-      config: state.config,
-      generateAuthParams: state.generateAuthParams,
+      fetchGenres: state.fetchGenres,
     })),
   );
 
   useEffect(() => {
     // Fetch genres from the server
-    const fetchGenres = async () => {
+    const loadGenres = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Return early if no config is available
-        if (!config || !config.serverUrl) {
-          setError("Server configuration is missing");
-          setIsLoading(false);
-          return;
-        }
-
-        // Generate authentication parameters
-        const authParams = generateAuthParams();
-
-        // Make API request to get genres
-        const response = await fetch(
-          `${config.serverUrl}/rest/getGenres.view?${authParams.toString()}`,
-        );
-        const data = await response.json();
-
-        if (data["subsonic-response"].status === "ok") {
-          const genresData = data["subsonic-response"].genres?.genre || [];
-
-          const genresArray = Array.isArray(genresData)
-            ? genresData
-            : [genresData];
-
-          // Format and set genres with simplified logic
-          const formattedGenres = genresArray
-            .filter((genre: any) => genre && genre.value) // Filter out genres without a value
-            .map((genre: any) => ({
-              id: genre.value,
-              name: genre.value, // Use value for the name
-              songCount: genre.songCount || 0,
-            }));
-
-          // Sort alphabetically by name
-          formattedGenres.sort((a: Genre, b: Genre) =>
-            (a.name || "").localeCompare(b.name || ""),
-          );
-
-          setGenres(formattedGenres);
-        } else {
-          throw new Error(
-            data["subsonic-response"].error?.message ||
-              "Failed to fetch genres",
-          );
-        }
+        const genresData = await fetchGenres();
+        setGenres(genresData);
       } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to fetch genres");
         console.error("Error fetching genres:", error);
-        setError(error instanceof Error ? error.message : "An error occurred");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchGenres();
-  }, [config, generateAuthParams]);
+    loadGenres();
+  }, [fetchGenres]);
 
   const renderGenreItem = ({ item }: { item: Genre }) => (
     <TouchableOpacity
@@ -167,74 +119,74 @@ export default function GenresScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-  },
   backButton: {
     marginRight: 12,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
   },
   emptyContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
   },
   emptyText: {
-    fontSize: 18,
     fontFamily: "Inter-Medium",
+    fontSize: 18,
   },
   errorText: {
-    fontSize: 16,
     fontFamily: "Inter-Medium",
-    textAlign: "center",
+    fontSize: 16,
     padding: 20,
+    textAlign: "center",
   },
-  listContainer: {
-    padding: 15,
-  },
-  genresRow: {
-    justifyContent: "space-between",
-  },
-  genreItem: {
-    width: "48%",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    flexDirection: "column",
-    alignItems: "center",
+  genreCount: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    textAlign: "center",
   },
   genreIcon: {
     marginBottom: 8,
   },
+  genreItem: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "column",
+    marginBottom: 15,
+    padding: 15,
+    width: "48%",
+  },
   genreName: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
     textAlign: "center",
   },
-  genreCount: {
-    fontSize: 14,
+  genresRow: {
+    justifyContent: "space-between",
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    padding: 20,
+    paddingTop: 60,
+  },
+  listContainer: {
+    padding: 15,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  loadingText: {
     fontFamily: "Inter-Regular",
-    textAlign: "center",
+    fontSize: 16,
+    marginTop: 10,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

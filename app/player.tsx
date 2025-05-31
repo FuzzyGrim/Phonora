@@ -9,7 +9,8 @@ import {
   Animated,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore, Song } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
+import { Song } from "@/store/types";
 import {
   Play,
   Pause,
@@ -290,7 +291,7 @@ export default function PlayerScreen() {
         style={[
           styles.songItem,
           isCurrentSong && styles.currentSongItem,
-          { backgroundColor: isCurrentSong ? colors.surface : "transparent" },
+          isCurrentSong && { backgroundColor: colors.surface },
         ]}
         onPress={() => handleSongPress(item)}
       >
@@ -398,7 +399,7 @@ export default function PlayerScreen() {
         />
       </View>
 
-      <View style={styles.playerControls}>
+      <View style={[styles.playerControls, { borderTopColor: colors.border }]}>
         <View style={styles.songDetails}>
           <Text style={[styles.songTitle, { color: colors.text }]}>
             {currentSong.title}
@@ -458,12 +459,15 @@ export default function PlayerScreen() {
 
           <TouchableOpacity
             onPress={handlePlayPause}
-            style={styles.playPauseButton}
+            style={[
+              styles.playPauseButton,
+              { backgroundColor: colors.primary },
+            ]}
           >
             {playback.isPlaying ? (
-              <Pause size={32} color="#ffffff" />
+              <Pause size={32} color={colors.text} />
             ) : (
-              <Play size={32} color="#ffffff" />
+              <Play size={32} color={colors.text} />
             )}
           </TouchableOpacity>
 
@@ -514,26 +518,124 @@ export default function PlayerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
   closeButton: {
     padding: 8,
   },
-  headerTitle: {
+  container: {
+    flex: 1,
+  },
+  controlButton: {
+    padding: 8,
+  },
+  currentSongCoverArt: {
+    height: 60,
+    width: 60,
+  },
+  currentSongItem: {
+    paddingVertical: 12,
+  },
+  currentSongText: {
     fontSize: 16,
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 60,
+  },
+  headerTitle: {
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
+  },
+  mainControls: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    width: "100%",
+  },
+  nowPlayingIndicator: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    height: 16,
+    marginLeft: 8,
+    width: 20,
   },
   placeholder: {
     width: 40,
+  },
+  placeholderCover: {
+    alignItems: "center",
+    borderRadius: 4,
+    height: 50,
+    justifyContent: "center",
+    marginRight: 12,
+    width: 50,
+  },
+  playPauseButton: {
+    alignItems: "center",
+    borderRadius: 32,
+    height: 64,
+    justifyContent: "center",
+    width: 64,
+  },
+  playerControls: {
+    borderTopWidth: 1,
+    paddingBottom: 36,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  playingBar: {
+    borderRadius: 2,
+    marginHorizontal: 1,
+    width: 4,
+  },
+  progressBar: {
+    height: 40,
+    width: "100%",
+  },
+  progressContainer: {
+    marginBottom: 16,
+    width: "100%",
+  },
+  songArtist: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  songCoverArt: {
+    borderRadius: 4,
+    height: 50,
+    marginRight: 12,
+    width: 50,
+  },
+  songDetails: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  songItem: {
+    borderRadius: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  songItemArtist: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+  },
+  songItemContent: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  songItemDetails: {
+    flex: 1,
+  },
+  songItemTitle: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 14,
+    marginBottom: 4,
   },
   songListContainer: {
     flex: 1,
@@ -542,129 +644,29 @@ const styles = StyleSheet.create({
   songListContent: {
     paddingBottom: 16,
   },
-  songItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  currentSongItem: {
-    paddingVertical: 12,
-  },
-  songItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  songCoverArt: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  currentSongCoverArt: {
-    width: 60,
-    height: 60,
-  },
-  placeholderCover: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  songItemDetails: {
-    flex: 1,
-  },
-  songItemTitle: {
-    fontSize: 14,
-    fontFamily: "Inter-SemiBold",
-    marginBottom: 4,
-  },
-  currentSongText: {
-    fontSize: 16,
-  },
-  songItemArtist: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-  },
-  nowPlayingIndicator: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    height: 16,
-    width: 20,
-    marginLeft: 8,
-  },
-  playingBar: {
-    width: 4,
-    marginHorizontal: 1,
-    borderRadius: 2,
-  },
-  playerControls: {
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
-  },
-  songDetails: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
   songTitle: {
-    fontSize: 18,
     fontFamily: "Inter-Bold",
+    fontSize: 18,
     marginBottom: 4,
     textAlign: "center",
   },
-  songArtist: {
+  speedButton: {
+    alignSelf: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  speedText: {
+    fontFamily: "Inter-Medium",
     fontSize: 14,
-    fontFamily: "Inter-Regular",
-    textAlign: "center",
-  },
-  progressContainer: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  progressBar: {
-    width: "100%",
-    height: 40,
   },
   timeInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   timeText: {
-    fontSize: 12,
     fontFamily: "Inter-Regular",
-  },
-  mainControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 16,
-  },
-  controlButton: {
-    padding: 8,
-  },
-  playPauseButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#4F46E5", // Indigo color
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  speedButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignSelf: "center",
-  },
-  speedText: {
-    fontSize: 14,
-    fontFamily: "Inter-Medium",
+    fontSize: 12,
   },
 });

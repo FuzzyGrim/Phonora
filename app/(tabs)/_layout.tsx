@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { useTheme } from "@/context/ThemeContext";
 import { Home, Search, Library, Settings } from "lucide-react-native";
 import { View, StyleSheet } from "react-native";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import MiniPlayer from "@/components/MiniPlayer";
 

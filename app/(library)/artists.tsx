@@ -11,82 +11,27 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, User } from "lucide-react-native";
 import { router } from "expo-router";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
-
-interface Artist {
-  id: string;
-  name: string;
-  albumCount: number;
-  imageUrl?: string;
-}
+import { Artist } from "@/store/types";
 
 export default function ArtistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const { config } = useMusicPlayerStore(
+  const { fetchArtists } = useMusicPlayerStore(
     useShallow((state) => ({
-      config: state.config,
+      fetchArtists: state.fetchArtists,
     })),
   );
 
   useEffect(() => {
     // Fetch artists from the server
-    const fetchArtists = async () => {
+    const loadArtists = async () => {
       setIsLoading(true);
       try {
-        if (!config || !config.serverUrl) {
-          console.error("Server configuration is missing");
-          setIsLoading(false);
-          return;
-        }
-
-        // Get the auth parameters from the store
-        const { generateAuthParams, getCoverArtUrl } =
-          useMusicPlayerStore.getState();
-        const authParams = generateAuthParams();
-
-        // Make the API call to get all artists
-        const response = await fetch(
-          `${config.serverUrl}/rest/getArtists.view?${authParams.toString()}`,
-        );
-
-        const data = await response.json();
-
-        if (
-          data["subsonic-response"].status === "ok" &&
-          data["subsonic-response"].artists
-        ) {
-          // Subsonic organizes artists in indexes (by first letter)
-          const indexes = data["subsonic-response"].artists.index || [];
-          let allArtists: Artist[] = [];
-
-          // Flatten the indexes structure to get all artists
-          indexes.forEach((index: any) => {
-            if (index.artist && Array.isArray(index.artist)) {
-              const artistsInIndex = index.artist.map((artist: any) => ({
-                id: artist.id,
-                name: artist.name,
-                albumCount: artist.albumCount || 0,
-                imageUrl: artist.coverArt
-                  ? getCoverArtUrl(artist.coverArt)
-                  : undefined,
-              }));
-              allArtists = [...allArtists, ...artistsInIndex];
-            }
-          });
-
-          // Sort artists alphabetically by name
-          allArtists.sort((a, b) => a.name.localeCompare(b.name));
-
-          setArtists(allArtists);
-        } else {
-          throw new Error(
-            data["subsonic-response"].error?.message ||
-              "Failed to fetch artists",
-          );
-        }
+        const artistsData = await fetchArtists();
+        setArtists(artistsData);
       } catch (error) {
         console.error("Error fetching artists:", error);
       } finally {
@@ -94,8 +39,8 @@ export default function ArtistsScreen() {
       }
     };
 
-    fetchArtists();
-  }, [config]);
+    loadArtists();
+  }, [fetchArtists]);
 
   const renderArtistItem = ({ item }: { item: Artist }) => (
     <TouchableOpacity
@@ -167,77 +112,77 @@ export default function ArtistsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+  artistCount: {
     fontFamily: "Inter-Regular",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "Inter-Medium",
-  },
-  listContainer: {
-    padding: 20,
-  },
-  artistItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-  },
-  artistItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  artistImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  artistIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    fontSize: 14,
   },
   artistDetails: {
     marginLeft: 15,
   },
+  artistIcon: {
+    alignItems: "center",
+    borderRadius: 24,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  artistImage: {
+    borderRadius: 24,
+    height: 48,
+    width: 48,
+  },
+  artistItem: {
+    alignItems: "center",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 15,
+  },
+  artistItemLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
   artistName: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
   },
-  artistCount: {
-    fontSize: 14,
+  backButton: {
+    marginRight: 12,
+  },
+  container: {
+    flex: 1,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 18,
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    padding: 20,
+    paddingTop: 60,
+  },
+  listContainer: {
+    padding: 20,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  loadingText: {
     fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 10,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

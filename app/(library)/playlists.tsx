@@ -11,91 +11,40 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Music } from "lucide-react-native";
 import { router } from "expo-router";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
-
-interface Playlist {
-  id: string;
-  name: string;
-  songCount: number;
-  coverArt?: string;
-  owner?: string;
-  public?: boolean;
-  created?: string;
-  changed?: string;
-}
+import { Playlist } from "@/store/types";
 
 export default function PlaylistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { getCoverArtUrl } = useMusicPlayerStore();
-  const { config, generateAuthParams } = useMusicPlayerStore(
+  const { getCoverArtUrl, fetchPlaylists } = useMusicPlayerStore(
     useShallow((state) => ({
-      config: state.config,
-      generateAuthParams: state.generateAuthParams,
+      getCoverArtUrl: state.getCoverArtUrl,
+      fetchPlaylists: state.fetchPlaylists,
     })),
   );
 
   useEffect(() => {
     // Fetch playlists from the server
-    const fetchPlaylists = async () => {
+    const loadPlaylists = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Return early if no config is available
-        if (!config || !config.serverUrl) {
-          setError("Server configuration is missing");
-          setIsLoading(false);
-          return;
-        }
-
-        // Generate authentication parameters
-        const authParams = generateAuthParams();
-
-        // Make API request to get playlists
-        const response = await fetch(
-          `${config.serverUrl}/rest/getPlaylists.view?${authParams.toString()}`,
-        );
-        const data = await response.json();
-
-        if (data["subsonic-response"].status === "ok") {
-          // Extract playlists from the response
-          const playlistList =
-            data["subsonic-response"].playlists?.playlist || [];
-
-          // Format and set playlists
-          const formattedPlaylists = playlistList.map((playlist: any) => ({
-            id: playlist.id,
-            name: playlist.name,
-            songCount: playlist.songCount || 0,
-            coverArt: playlist.coverArt,
-            owner: playlist.owner,
-            public: playlist.public,
-            created: playlist.created,
-            changed: playlist.changed,
-          }));
-
-          setPlaylists(formattedPlaylists);
-        } else {
-          throw new Error(
-            data["subsonic-response"].error?.message ||
-              "Failed to fetch playlists",
-          );
-        }
+        const playlistsData = await fetchPlaylists();
+        setPlaylists(playlistsData);
       } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to fetch playlists");
         console.error("Error fetching playlists:", error);
-        setError(
-          error instanceof Error ? error.message : "Failed to fetch playlists",
-        );
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPlaylists();
-  }, [config, generateAuthParams]);
+    loadPlaylists();
+  }, [fetchPlaylists]);
 
   const renderPlaylistItem = ({ item }: { item: Playlist }) => (
     <TouchableOpacity
@@ -184,88 +133,88 @@ export default function PlaylistsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-  },
   backButton: {
     marginRight: 12,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
   },
   emptyContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
   },
   emptyText: {
-    fontSize: 18,
     fontFamily: "Inter-Medium",
+    fontSize: 18,
   },
   errorText: {
-    fontSize: 16,
     fontFamily: "Inter-Medium",
-    textAlign: "center",
+    fontSize: 16,
     padding: 20,
+    textAlign: "center",
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    padding: 20,
+    paddingTop: 60,
   },
   listContainer: {
     padding: 20,
   },
-  playlistItem: {
-    flexDirection: "row",
+  loadingContainer: {
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-  },
-  playlistItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  playlistIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    flex: 1,
     justifyContent: "center",
-    alignItems: "center",
   },
-  playlistImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+  loadingText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 10,
+  },
+  playlistCount: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
   },
   playlistDetails: {
     marginLeft: 15,
   },
+  playlistIcon: {
+    alignItems: "center",
+    borderRadius: 8,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  playlistImage: {
+    borderRadius: 8,
+    height: 48,
+    width: 48,
+  },
+  playlistItem: {
+    alignItems: "center",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 15,
+  },
+  playlistItemLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
   playlistName: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
   },
-  playlistCount: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-  },
   playlistOwner: {
-    fontSize: 12,
     fontFamily: "Inter-Regular",
+    fontSize: 12,
     marginTop: 2,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

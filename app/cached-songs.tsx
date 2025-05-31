@@ -10,7 +10,8 @@ import {
   Alert,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
+import { Song } from "@/store/types";
 import * as FileSystem from "expo-file-system";
 import { ChevronLeft, HardDrive, Music2 } from "lucide-react-native";
 import { router } from "expo-router";
@@ -79,7 +80,7 @@ export default function CachedSongsScreen() {
           // Find associated song for images
           let associatedSong;
           if (isImage) {
-            const song = songs.find((s) => s.coverArt === id);
+            const song = songs.find((s: Song) => s.coverArt === id);
             if (song) {
               associatedSong = {
                 title: song.title,
@@ -112,7 +113,7 @@ export default function CachedSongsScreen() {
         const songGroups: CachedSongGroup[] = [];
 
         for (const audioFile of audioFiles) {
-          const song = songs.find((s) => s.id === audioFile.id);
+          const song = songs.find((s: Song) => s.id === audioFile.id);
           if (song) {
             // Find matching image for this song if it exists
             const matchingImage = imageFiles.find(
@@ -204,9 +205,11 @@ export default function CachedSongsScreen() {
                   </View>
                 </View>
               </View>
-              <View style={styles.statDivider} />
+              <View
+                style={[styles.statDivider, { backgroundColor: colors.border }]}
+              />
               <View style={styles.statItem}>
-                <View style={[styles.statWithIcon, { paddingLeft: 16 }]}>
+                <View style={[styles.statWithIcon, styles.statWithIconPadding]}>
                   <Music2
                     color={colors.primary}
                     size={20}
@@ -339,7 +342,9 @@ export default function CachedSongsScreen() {
                   );
                 }}
               >
-                <Text style={[styles.clearCacheButtonText, { color: "#fff" }]}>
+                <Text
+                  style={[styles.clearCacheButtonText, { color: colors.text }]}
+                >
                   Clear Cache
                 </Text>
               </TouchableOpacity>
@@ -352,146 +357,148 @@ export default function CachedSongsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-  },
   backButton: {
     marginRight: 12,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-  },
-  contentContainer: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  },
-  summaryContainer: {
-    margin: 16,
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  summaryStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    padding: 16,
-  },
-  statItem: {
-    flex: 1,
-  },
-  statWithIcon: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statIcon: {
-    marginRight: 12,
-  },
-  statTextContainer: {
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 18,
-    fontFamily: "Inter-Bold",
-  },
-  statLabel: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-  },
-  statDivider: {
-    height: 40,
-    width: 1,
-    backgroundColor: "rgba(150, 150, 150, 0.3)",
-  },
   clearCacheButton: {
-    padding: 16,
     alignItems: "center",
-    justifyContent: "center",
-    margin: 16,
     borderRadius: 12,
-    position: "absolute",
     bottom: 30,
+    justifyContent: "center",
     left: 0,
+    margin: 16,
+    padding: 16,
+    position: "absolute",
     right: 0,
   },
   clearCacheButtonText: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
   },
   emptyContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
   },
   emptyText: {
-    fontSize: 18,
     fontFamily: "Inter-Medium",
+    fontSize: 18,
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    padding: 20,
+    paddingTop: 60,
   },
   listContent: {
     padding: 16,
     paddingBottom: 80,
   },
-  songCard: {
-    flexDirection: "row",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  songImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  songImage: {
-    width: "100%",
-    height: "100%",
-  },
-  placeholderImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 6,
-  },
-  songDetails: {
+  loadingContainer: {
+    alignItems: "center",
     flex: 1,
-    marginLeft: 12,
     justifyContent: "center",
   },
-  songTitle: {
-    fontSize: 16,
-    fontFamily: "Inter-SemiBold",
-    marginBottom: 4,
-  },
-  songArtist: {
-    fontSize: 14,
+  loadingText: {
     fontFamily: "Inter-Regular",
-    marginBottom: 6,
+    fontSize: 16,
+    marginTop: 10,
+  },
+  placeholderImage: {
+    borderRadius: 6,
+    height: "100%",
+    width: "100%",
   },
   sizeInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   sizeText: {
-    fontSize: 12,
     fontFamily: "Inter-Regular",
+    fontSize: 12,
+  },
+  songArtist: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  songCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: 12,
+    padding: 12,
+  },
+  songDetails: {
+    flex: 1,
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+  songImage: {
+    height: "100%",
+    width: "100%",
+  },
+  songImageContainer: {
+    borderRadius: 6,
+    height: 60,
+    overflow: "hidden",
+    width: 60,
+  },
+  songTitle: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  statDivider: {
+    height: 40,
+    width: 1,
+  },
+  statIcon: {
+    marginRight: 12,
+  },
+  statItem: {
+    flex: 1,
+  },
+  statLabel: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+  },
+  statTextContainer: {
+    flex: 1,
+  },
+  statValue: {
+    fontFamily: "Inter-Bold",
+    fontSize: 18,
+  },
+  statWithIcon: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  statWithIconPadding: {
+    paddingLeft: 16,
+  },
+  summaryContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    margin: 16,
+    overflow: "hidden",
+  },
+  summaryStats: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    padding: 16,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

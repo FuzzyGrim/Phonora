@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { Play, Pause, SkipForward, Music2 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
@@ -82,49 +82,49 @@ export default function MiniPlayer() {
 }
 
 const styles = StyleSheet.create({
+  artist: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+  },
+  button: {
+    padding: 8,
+  },
   container: {
-    height: 60,
-    flexDirection: "row",
     alignItems: "center",
+    borderTopWidth: 1,
+    flexDirection: "row",
+    height: 60,
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    borderTopWidth: 1,
   },
-  songInfo: {
-    flexDirection: "row",
+  controls: {
     alignItems: "center",
-    flex: 1,
+    flexDirection: "row",
   },
   coverArt: {
-    width: 40,
-    height: 40,
     borderRadius: 4,
+    height: 40,
     marginRight: 12,
+    width: 40,
   },
   placeholderCover: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 4,
+    height: 40,
+    justifyContent: "center",
+    marginRight: 12,
+    width: 40,
+  },
+  songInfo: {
+    alignItems: "center",
+    flexDirection: "row",
+    flex: 1,
   },
   textContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 14,
     fontFamily: "Inter-SemiBold",
-  },
-  artist: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-  },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  button: {
-    padding: 8,
+    fontSize: 14,
   },
 });

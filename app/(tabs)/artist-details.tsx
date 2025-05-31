@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { ChevronLeft, User, Disc, Play } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useShallow } from "zustand/react/shallow";
@@ -324,115 +324,115 @@ export default function ArtistDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  albumCard: {
+    borderRadius: 8,
+    marginBottom: 15,
+    overflow: "hidden",
+    width: "48%",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
+  albumCount: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  albumCover: {
+    aspectRatio: 1,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    width: "100%",
+  },
+  albumGrid: {
+    justifyContent: "space-between",
+    marginBottom: 10,
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
+  },
+  albumInfo: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  albumTitle: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 14,
+    padding: 10,
+    paddingBottom: 4,
+  },
+  artistHeader: {
+    alignItems: "center",
+    marginBottom: 10,
+    padding: 20,
+  },
+  artistIconContainer: {
+    alignItems: "center",
+    borderRadius: 60,
+    height: 120,
+    justifyContent: "center",
+    marginBottom: 15,
+    width: 120,
+  },
+  artistName: {
+    fontFamily: "Inter-Bold",
+    fontSize: 24,
+    marginBottom: 6,
+    textAlign: "center",
   },
   backButton: {
     marginRight: 10,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "Inter-SemiBold",
-  },
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
   },
   errorContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 20,
   },
   errorText: {
-    fontSize: 16,
     fontFamily: "Inter-Medium",
-    textAlign: "center",
-  },
-  artistHeader: {
-    alignItems: "center",
-    padding: 20,
-    marginBottom: 10,
-  },
-  artistIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  artistName: {
-    fontSize: 24,
-    fontFamily: "Inter-Bold",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  albumCount: {
     fontSize: 16,
-    fontFamily: "Inter-Regular",
-    marginBottom: 20,
+    textAlign: "center",
   },
-  playAllButton: {
-    flexDirection: "row",
+  header: {
     alignItems: "center",
-    paddingVertical: 10,
+    flexDirection: "row",
+    paddingBottom: 15,
     paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingTop: 60,
   },
-  playAllText: {
-    marginLeft: 8,
-    fontSize: 14,
+  headerTitle: {
     fontFamily: "Inter-SemiBold",
+    fontSize: 18,
   },
-  albumGrid: {
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 10,
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
-  albumCard: {
-    width: "48%",
-    marginBottom: 15,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  albumCover: {
-    width: "100%",
-    aspectRatio: 1,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+  loadingText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 10,
   },
   placeholderCover: {
-    width: "100%",
+    alignItems: "center",
     aspectRatio: 1,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     justifyContent: "center",
+    width: "100%",
+  },
+  playAllButton: {
     alignItems: "center",
+    borderRadius: 20,
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  albumTitle: {
-    fontSize: 14,
+  playAllText: {
     fontFamily: "Inter-SemiBold",
-    padding: 10,
-    paddingBottom: 4,
-  },
-  albumInfo: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    fontSize: 14,
+    marginLeft: 8,
   },
 });

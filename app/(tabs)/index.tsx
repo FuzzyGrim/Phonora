@@ -1,5 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
+import { Song } from "@/store/types";
 import { Music2, Pause, Play, WifiOff } from "lucide-react-native";
 import React from "react";
 import {
@@ -47,7 +48,7 @@ export default function HomeScreen() {
     }
   }, [fetchSongs, isOfflineMode]);
 
-  const handlePlayPress = async (song: any) => {
+  const handlePlayPress = async (song: Song) => {
     if (playback.currentSong?.id === song.id) {
       if (playback.isPlaying) {
         await pauseSong();
@@ -60,7 +61,7 @@ export default function HomeScreen() {
     }
   };
 
-  const getCoverImageSource = (song: any) => {
+  const getCoverImageSource = (song: Song) => {
     if (!song.coverArt) return null;
 
     // In offline mode, try to use cached image path
@@ -71,6 +72,20 @@ export default function HomeScreen() {
     }
 
     return { uri: getCoverArtUrl(song.coverArt) };
+  };
+
+  const getSongCardStyle = (song: Song) => {
+    const isCurrentSong = playback.currentSong?.id === song.id;
+    return [
+      styles.songCard,
+      {
+        backgroundColor: colors.surface,
+        ...(isCurrentSong && {
+          borderColor: colors.primary,
+          borderWidth: 1,
+        }),
+      },
+    ];
   };
 
   if (isLoading && !refreshing) {
@@ -169,21 +184,8 @@ export default function HomeScreen() {
             )}
           </View>
         ) : (
-          availableSongs.map((song) => (
-            <TouchableOpacity
-              key={song.id}
-              style={[
-                styles.songCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor:
-                    playback.currentSong?.id === song.id
-                      ? colors.primary
-                      : "transparent",
-                  borderWidth: playback.currentSong?.id === song.id ? 1 : 0,
-                },
-              ]}
-            >
+          availableSongs.map((song: Song) => (
+            <TouchableOpacity key={song.id} style={getSongCardStyle(song)}>
               {song.coverArt && getCoverImageSource(song) ? (
                 <Image
                   source={getCoverImageSource(song)!}
@@ -251,67 +253,119 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  albumName: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+  },
+  artistName: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  centered: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
   },
-  centered: {
-    justifyContent: "center",
+  content: {
+    padding: 20,
+  },
+  coverArt: {
+    borderRadius: 8,
+    height: 56,
+    width: 56,
+  },
+  duration: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  emptyState: {
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyStateSubtext: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  emptyStateText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  errorText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: "center",
   },
   header: {
     padding: 20,
     paddingTop: 60,
   },
   headerContent: {
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 8,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
+  networkBanner: {
+    borderRadius: 8,
+    marginTop: 8,
+    padding: 12,
+  },
+  networkBannerText: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 14,
+    textAlign: "center",
   },
   offlineIndicator: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     gap: 4,
   },
   offlineText: {
-    fontSize: 12,
     fontFamily: "Inter-Regular",
-  },
-  networkBanner: {
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  networkBannerText: {
-    fontSize: 14,
-    fontFamily: "Inter-SemiBold",
-    textAlign: "center",
-  },
-  content: {
-    padding: 20,
-  },
-  songCard: {
-    flexDirection: "row",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    alignItems: "center",
-  },
-  coverArt: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
+    fontSize: 12,
   },
   placeholderCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 8,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
+  },
+  playButton: {
+    alignItems: "center",
+    borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  retryButton: {
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  retryButtonText: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 16,
+  },
+  songActions: {
+    alignItems: "flex-end",
+  },
+  songCard: {
+    alignItems: "center",
+    borderRadius: 12,
+    flexDirection: "row",
+    marginBottom: 12,
+    padding: 12,
   },
   songInfo: {
     flex: 1,
@@ -319,64 +373,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   songTitle: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
   },
-  artistName: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-    marginBottom: 2,
-  },
-  albumName: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-  },
-  songActions: {
-    alignItems: "flex-end",
-  },
-  duration: {
-    fontSize: 12,
-    fontFamily: "Inter-Regular",
-    marginBottom: 8,
-  },
-  playButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter-SemiBold",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-    marginTop: 16,
-    textAlign: "center",
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-    marginTop: 8,
-    textAlign: "center",
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

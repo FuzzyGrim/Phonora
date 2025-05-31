@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import {
   CircleCheck as CheckCircle2,
   Circle as XCircle,
@@ -180,7 +180,7 @@ export default function SettingsScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoidingView}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
     >
@@ -200,7 +200,12 @@ export default function SettingsScreen() {
             </Text>
 
             {error && (
-              <View style={[styles.messageContainer, styles.errorContainer]}>
+              <View
+                style={[
+                  styles.messageContainer,
+                  { backgroundColor: colors.error + "20" },
+                ]}
+              >
                 <XCircle color={colors.error} size={20} />
                 <Text style={[styles.messageText, { color: colors.error }]}>
                   {error}
@@ -209,7 +214,13 @@ export default function SettingsScreen() {
             )}
 
             {success && (
-              <View style={[styles.messageContainer, styles.successContainer]}>
+              <View
+                style={[
+                  styles.messageContainer,
+                  styles.successContainer,
+                  { backgroundColor: colors.success + "20" },
+                ]}
+              >
                 <CheckCircle2 color={colors.success} size={20} />
                 <Text style={[styles.messageText, { color: colors.success }]}>
                   Connection successful!
@@ -339,7 +350,8 @@ export default function SettingsScreen() {
                 <Text
                   style={[
                     styles.helperText,
-                    { color: colors.primary, marginTop: 8 },
+                    styles.warningText,
+                    { color: colors.primary },
                   ]}
                 >
                   ⚠️ Offline mode automatically enabled due to no internet
@@ -350,7 +362,8 @@ export default function SettingsScreen() {
                 <Text
                   style={[
                     styles.helperText,
-                    { color: colors.error, marginTop: 8 },
+                    styles.errorText,
+                    { color: colors.error },
                   ]}
                 >
                   ⚠️ No internet connection detected. Offline mode will be
@@ -465,141 +478,136 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontFamily: "Inter-SemiBold",
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-    marginBottom: 8,
-  },
-  input: {
-    height: 45,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-  },
   button: {
-    height: 45,
-    borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 8,
+    height: 45,
+    justifyContent: "center",
     marginTop: 20,
+  },
+  buttonContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
-  },
-  messageContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  errorContainer: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-  },
-  successContainer: {
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
-  },
-  messageText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  settingLabel: {
     fontSize: 16,
-    fontFamily: "Inter-Regular",
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 8,
+  },
+  header: {
+    padding: 20,
+    paddingTop: 60,
   },
   helperText: {
+    fontFamily: "Inter-Regular",
     fontSize: 12,
     marginTop: 4,
+  },
+  input: {
+    borderRadius: 8,
+    borderWidth: 1,
     fontFamily: "Inter-Regular",
+    fontSize: 16,
+    height: 45,
+    paddingHorizontal: 12,
   },
-  buttonGroup: {
-    marginTop: 10,
+  inputGroup: {
+    marginBottom: 15,
   },
-  buttonContent: {
-    flexDirection: "row",
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  label: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  messageContainer: {
     alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 8,
+    flexDirection: "row",
+    marginBottom: 16,
+    padding: 12,
+  },
+  messageText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 20,
+    marginBottom: 20,
+  },
+  settingLabel: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+  },
+  settingRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
   },
   stepper: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     height: 45,
   },
   stepperButton: {
-    width: 45,
-    height: 45,
-    justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
+    height: 45,
+    justifyContent: "center",
+    width: 45,
   },
   stepperInput: {
-    flex: 1,
-    height: 45,
-    borderWidth: 1,
     borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    height: 45,
     marginHorizontal: 8,
     paddingHorizontal: 12,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
     textAlign: "center",
   },
-  smallClearButton: {
-    width: 30,
-    height: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 15,
-    marginLeft: 8,
+  successContainer: {
+    // Background color will be applied inline with theme colors
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
   viewCachedButton: {
-    height: 45,
+    alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
+    height: 45,
     justifyContent: "center",
-    alignItems: "center",
     marginTop: 12,
   },
   viewCachedButtonText: {
-    fontSize: 16,
     fontFamily: "Inter-Medium",
+    fontSize: 16,
     marginLeft: 10,
+  },
+  warningText: {
+    marginTop: 8,
   },
 });

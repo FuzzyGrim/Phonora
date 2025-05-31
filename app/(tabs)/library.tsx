@@ -56,35 +56,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  content: {
+    padding: 20,
+  },
   header: {
     padding: 20,
     paddingTop: 60,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  content: {
-    padding: 20,
-  },
   menuItem: {
-    flexDirection: "row",
     alignItems: "center",
+    borderBottomWidth: 1,
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 15,
-    borderBottomWidth: 1,
-  },
-  menuItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  menuItemText: {
-    marginLeft: 15,
-    fontSize: 16,
-    fontFamily: "Inter-SemiBold",
   },
   menuItemCount: {
-    fontSize: 16,
     fontFamily: "Inter-Regular",
+    fontSize: 16,
+  },
+  menuItemLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  menuItemText: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 16,
+    marginLeft: 15,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

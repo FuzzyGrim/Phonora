@@ -11,16 +11,9 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Disc } from "lucide-react-native";
 import { router } from "expo-router";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
-
-interface Album {
-  id: string;
-  name: string;
-  artist: string;
-  songCount: number;
-  imageUrl?: string;
-}
+import { Album } from "@/store/types";
 
 export default function AlbumsScreen() {
   const { colors } = useTheme();
@@ -28,59 +21,19 @@ export default function AlbumsScreen() {
   const [albums, setAlbums] = useState<Album[]>([]);
 
   // Access config from the store using shallow equality
-  const { config, getCoverArtUrl } = useMusicPlayerStore(
+  const { fetchAlbums } = useMusicPlayerStore(
     useShallow((state) => ({
-      config: state.config,
-      getCoverArtUrl: state.getCoverArtUrl,
+      fetchAlbums: state.fetchAlbums,
     })),
   );
 
   useEffect(() => {
     // Fetch albums from the server
-    const fetchAlbums = async () => {
+    const loadAlbums = async () => {
       setIsLoading(true);
       try {
-        if (!config || !config.serverUrl) {
-          console.error("Server configuration is missing");
-          setIsLoading(false);
-          return;
-        }
-
-        // Get the auth parameters from the store
-        const { generateAuthParams } = useMusicPlayerStore.getState();
-        const authParams = generateAuthParams();
-
-        // Make the API call to get all albums
-        const response = await fetch(
-          `${config.serverUrl}/rest/getAlbumList2.view?type=alphabeticalByName&size=500&${authParams.toString()}`,
-        );
-
-        const data = await response.json();
-
-        if (
-          data["subsonic-response"].status === "ok" &&
-          data["subsonic-response"].albumList2
-        ) {
-          const albumsData = data["subsonic-response"].albumList2.album || [];
-
-          // Map the API response to our Album interface
-          const formattedAlbums: Album[] = albumsData.map((album: any) => ({
-            id: album.id,
-            name: album.name,
-            artist: album.artist,
-            songCount: album.songCount,
-            imageUrl: album.coverArt
-              ? getCoverArtUrl(album.coverArt)
-              : undefined,
-          }));
-
-          setAlbums(formattedAlbums);
-        } else {
-          throw new Error(
-            data["subsonic-response"].error?.message ||
-              "Failed to fetch albums",
-          );
-        }
+        const albumsData = await fetchAlbums();
+        setAlbums(albumsData);
       } catch (error) {
         console.error("Error fetching albums:", error);
       } finally {
@@ -88,8 +41,8 @@ export default function AlbumsScreen() {
       }
     };
 
-    fetchAlbums();
-  }, [config, getCoverArtUrl]);
+    loadAlbums();
+  }, [fetchAlbums]);
 
   const renderAlbumItem = ({ item }: { item: Album }) => (
     <TouchableOpacity
@@ -171,74 +124,74 @@ export default function AlbumsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: "Inter-Bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+  albumArtist: {
     fontFamily: "Inter-Regular",
+    fontSize: 12,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
+  albumImage: {
+    height: "100%",
+    width: "100%",
+  },
+  albumImageContainer: {
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  albumItem: {
+    marginBottom: 20,
+    width: "48%",
+  },
+  albumName: {
+    fontFamily: "Inter-SemiBold",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  albumPlaceholder: {
     alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "Inter-Medium",
-  },
-  listContainer: {
-    padding: 15,
+    height: "100%",
+    justifyContent: "center",
+    width: "100%",
   },
   albumsRow: {
     justifyContent: "space-between",
   },
-  albumItem: {
-    width: "48%",
-    marginBottom: 20,
+  backButton: {
+    marginRight: 12,
   },
-  albumImageContainer: {
-    aspectRatio: 1,
-    marginBottom: 8,
-    borderRadius: 8,
-    overflow: "hidden",
+  container: {
+    flex: 1,
   },
-  albumImage: {
-    width: "100%",
-    height: "100%",
-  },
-  albumPlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
+  emptyContainer: {
     alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
-  albumName: {
-    fontSize: 14,
-    fontFamily: "Inter-SemiBold",
-    marginBottom: 2,
+  emptyText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 18,
   },
-  albumArtist: {
-    fontSize: 12,
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    padding: 20,
+    paddingTop: 60,
+  },
+  listContainer: {
+    padding: 15,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  loadingText: {
     fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 10,
+  },
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 32,
   },
 });

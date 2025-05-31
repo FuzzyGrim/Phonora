@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import {
   Search as SearchIcon,
   Music,
@@ -20,7 +20,7 @@ import {
   Pause,
 } from "lucide-react-native";
 import { router } from "expo-router";
-import { Song, Artist, Album } from "@/store/musicPlayerStore";
+import { Song, Artist, Album } from "@/store/types";
 
 // Type for items in our FlatList
 type SearchItem =
@@ -42,15 +42,13 @@ export default function SearchScreen() {
     resumeSong,
   } = useMusicPlayerStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle search when query changes
   useEffect(() => {
     // Clear previous timeout to debounce input
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
 
     // Don't search if query is empty
@@ -64,15 +62,13 @@ export default function SearchScreen() {
       search(searchQuery);
     }, 500);
 
-    setSearchTimeout(timeout as unknown as ReturnType<typeof setTimeout>);
+    searchTimeoutRef.current = timeout;
 
-    // Cleanup
+    // Cleanup function
     return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
+      clearTimeout(timeout);
     };
-  }, [searchQuery, search, searchTimeout]);
+  }, [searchQuery, search]);
 
   const handlePlaySong = (song: Song) => {
     // If the song is already playing, pause it
@@ -128,7 +124,7 @@ export default function SearchScreen() {
     // Add artists section if there are any
     if (searchResults.artists.length > 0) {
       items.push({ type: "header", title: "Artists" });
-      searchResults.artists.forEach((artist) =>
+      searchResults.artists.forEach((artist: Artist) =>
         items.push({ type: "artist", data: artist }),
       );
     }
@@ -136,7 +132,7 @@ export default function SearchScreen() {
     // Add albums section if there are any
     if (searchResults.albums.length > 0) {
       items.push({ type: "header", title: "Albums" });
-      searchResults.albums.forEach((album) =>
+      searchResults.albums.forEach((album: Album) =>
         items.push({ type: "album", data: album }),
       );
     }
@@ -144,7 +140,7 @@ export default function SearchScreen() {
     // Add songs section if there are any
     if (searchResults.songs.length > 0) {
       items.push({ type: "header", title: "Songs" });
-      searchResults.songs.forEach((song) =>
+      searchResults.songs.forEach((song: Song) =>
         items.push({ type: "song", data: song }),
       );
     }
@@ -329,87 +325,87 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
+  albumCover: {
+    borderRadius: 4,
+    height: 50,
+    width: 50,
+  },
   container: {
     flex: 1,
+  },
+  content: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  emptyList: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
   header: {
     padding: 20,
     paddingTop: 60,
   },
-  searchBar: {
-    flexDirection: "row",
+  iconContainer: {
     alignItems: "center",
-    padding: 10,
-    borderRadius: 10,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-  },
-  content: {
-    flex: 1,
+    borderRadius: 4,
+    height: 50,
     justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  list: {
-    paddingBottom: 80, // Extra space for mini player
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontFamily: "Inter-Bold",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    width: 50,
   },
   itemContainer: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
     borderBottomWidth: 0.5,
-  },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  albumCover: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   itemDetails: {
     flex: 1,
     marginLeft: 15,
   },
+  itemSubtitle: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+  },
   itemTitle: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
   },
-  itemSubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
+  list: {
+    paddingBottom: 80, // Extra space for mini player
+  },
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
   playButton: {
     padding: 10,
+  },
+  searchBar: {
+    alignItems: "center",
+    borderRadius: 10,
+    flexDirection: "row",
+    padding: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  sectionHeader: {
+    fontFamily: "Inter-Bold",
+    fontSize: 18,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  text: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
   },
 });

@@ -11,7 +11,7 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { ChevronLeft, Play, Music2 } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMusicPlayerStore } from "@/store/musicPlayerStore";
+import { useMusicPlayerStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
 
 // Song interface for this component
@@ -239,110 +239,110 @@ export default function GenreSongsScreen() {
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    marginRight: 12,
+  },
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
+  emptyContainer: {
     alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 18,
+  },
+  errorContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
     padding: 20,
     paddingTop: 60,
-  },
-  backButton: {
-    marginRight: 12,
   },
   headerTextContainer: {
     flex: 1,
   },
-  title: {
-    fontSize: 28,
-    fontFamily: "Inter-Bold",
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
-    marginTop: 4,
-  },
-  playButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: "Inter-Regular",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: "Inter-Medium",
-    textAlign: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: "Inter-Medium",
-  },
   listContainer: {
     paddingHorizontal: 20,
   },
-  songItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  songItemLeft: {
-    flexDirection: "row",
+  loadingContainer: {
     alignItems: "center",
     flex: 1,
+    justifyContent: "center",
   },
-  songImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
+  loadingText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 16,
+    marginTop: 10,
   },
   placeholderCover: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 4,
+    height: 50,
+    justifyContent: "center",
+    width: 50,
+  },
+  playButton: {
+    alignItems: "center",
+    borderRadius: 21,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  songArtist: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
   },
   songDetails: {
     flex: 1,
     marginLeft: 12,
     marginRight: 8,
   },
+  songDuration: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+  },
+  songImage: {
+    borderRadius: 4,
+    height: 50,
+    width: 50,
+  },
+  songItem: {
+    alignItems: "center",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
+  songItemLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    flex: 1,
+  },
   songTitle: {
-    fontSize: 16,
     fontFamily: "Inter-SemiBold",
+    fontSize: 16,
     marginBottom: 4,
   },
-  songArtist: {
-    fontSize: 14,
+  subtitle: {
     fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginTop: 4,
   },
-  songDuration: {
-    fontSize: 14,
-    fontFamily: "Inter-Regular",
+  title: {
+    fontFamily: "Inter-Bold",
+    fontSize: 28,
   },
 });
