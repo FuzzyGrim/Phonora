@@ -36,7 +36,9 @@ export default function PlaylistsScreen() {
         const playlistsData = await fetchPlaylists();
         setPlaylists(playlistsData);
       } catch (error) {
-        setError(error instanceof Error ? error.message : "Failed to fetch playlists");
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch playlists",
+        );
         console.error("Error fetching playlists:", error);
       } finally {
         setIsLoading(false);

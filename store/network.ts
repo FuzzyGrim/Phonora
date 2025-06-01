@@ -36,18 +36,20 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
   initializeNetworkMonitoring: () => {
     try {
       // Get initial network state and set up listener
-      NetInfo.fetch().then((networkState) => {
-        const initialNetworkState: NetworkState = {
-          isConnected: networkState.isConnected ?? false,
-          isInternetReachable: networkState.isInternetReachable,
-          type: networkState.type,
-        };
+      NetInfo.fetch()
+        .then((networkState) => {
+          const initialNetworkState: NetworkState = {
+            isConnected: networkState.isConnected ?? false,
+            isInternetReachable: networkState.isInternetReachable,
+            type: networkState.type,
+          };
 
-        // Update store with initial state
-        get().updateNetworkState(initialNetworkState);
-      }).catch((error) => {
-        console.error("Error fetching initial network state:", error);
-      });
+          // Update store with initial state
+          get().updateNetworkState(initialNetworkState);
+        })
+        .catch((error) => {
+          console.error("Error fetching initial network state:", error);
+        });
 
       // Set up listener for network changes
       NetInfo.addEventListener((state) => {

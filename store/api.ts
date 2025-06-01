@@ -128,31 +128,31 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         // Create empty arrays if any part of the response is missing
         const artists = searchData.artist
           ? searchData.artist.map((artist: any) => ({
-            id: artist.id,
-            name: artist.name,
-          }))
+              id: artist.id,
+              name: artist.name,
+            }))
           : [];
 
         const albums = searchData.album
           ? searchData.album.map((album: any) => ({
-            id: album.id,
-            name: album.name,
-            artist: album.artist,
-            artistId: album.artistId,
-            coverArt: album.coverArt,
-            songCount: album.songCount || 0,
-          }))
+              id: album.id,
+              name: album.name,
+              artist: album.artist,
+              artistId: album.artistId,
+              coverArt: album.coverArt,
+              songCount: album.songCount || 0,
+            }))
           : [];
 
         const songs = searchData.song
           ? searchData.song.map((song: any) => ({
-            id: song.id,
-            title: song.title,
-            artist: song.artist,
-            album: song.album,
-            duration: song.duration,
-            coverArt: song.coverArt,
-          }))
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration: song.duration,
+              coverArt: song.coverArt,
+            }))
           : [];
 
         set({
@@ -233,7 +233,9 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             id: artist.id,
             name: artist.name,
             albumCount: artist.albumCount || 0,
-            coverArt: artist.coverArt ? getCoverArtUrl(artist.coverArt) : undefined,
+            coverArt: artist.coverArt
+              ? getCoverArtUrl(artist.coverArt)
+              : undefined,
           }));
           allArtists = [...allArtists, ...artistsInIndex];
         }

@@ -36,7 +36,9 @@ export default function GenresScreen() {
         const genresData = await fetchGenres();
         setGenres(genresData);
       } catch (error) {
-        setError(error instanceof Error ? error.message : "Failed to fetch genres");
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch genres",
+        );
         console.error("Error fetching genres:", error);
       } finally {
         setIsLoading(false);
