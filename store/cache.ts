@@ -385,7 +385,7 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
     }
 
     // Get the image URL and download the image
-    const imageUrl = getCoverArtUrl(imageId);
+    const coverArt = getCoverArtUrl(imageId);
     const filePath = get().getCachedFilePath(imageId, "jpg");
 
     // Check if caching is enabled
@@ -395,7 +395,7 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
       try {
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
-          imageUrl,
+          coverArt,
           filePath,
         );
 
@@ -404,14 +404,14 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
           return filePath;
         } else {
           console.error("Failed to download image:", downloadResult.status);
-          return imageUrl; // Fallback to remote URL
+          return coverArt; // Fallback to remote URL
         }
       } catch (error) {
         console.error("Error caching image:", error);
-        return imageUrl; // Fallback to remote URL
+        return coverArt; // Fallback to remote URL
       }
     } else {
-      return imageUrl; // Caching disabled, return remote URL
+      return coverArt; // Caching disabled, return remote URL
     }
   },
 

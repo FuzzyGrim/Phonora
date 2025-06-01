@@ -123,7 +123,7 @@ describe('Library Screens Integration Tests', () => {
                 name: 'Test Album 2',
                 artist: 'Test Artist 2',
                 songCount: 8,
-                imageUrl: 'https://example.com/album2.jpg',
+                coverArt: 'https://example.com/album2.jpg',
             },
         ];
 
@@ -200,7 +200,7 @@ describe('Library Screens Integration Tests', () => {
                 id: 'artist1',
                 name: 'Test Artist 1',
                 albumCount: 5,
-                imageUrl: 'https://example.com/artist1.jpg',
+                coverArt: 'https://example.com/artist1.jpg',
             },
             {
                 id: 'artist2',

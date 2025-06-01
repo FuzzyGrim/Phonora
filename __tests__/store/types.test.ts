@@ -45,13 +45,13 @@ describe('Types Module', () => {
         id: 'artist-id',
         name: 'Test Artist',
         albumCount: 5,
-        imageUrl: 'http://example.com/image.jpg',
+        coverArt: 'http://example.com/image.jpg',
       };
 
       expect(artist.id).toBe('artist-id');
       expect(artist.name).toBe('Test Artist');
       expect(artist.albumCount).toBe(5);
-      expect(artist.imageUrl).toBe('http://example.com/image.jpg');
+      expect(artist.coverArt).toBe('http://example.com/image.jpg');
     });
 
     it('should define Album interface correctly', () => {
@@ -60,14 +60,14 @@ describe('Types Module', () => {
         name: 'Test Album',
         artist: 'Test Artist',
         songCount: 10,
-        imageUrl: 'http://example.com/album.jpg',
+        coverArt: 'http://example.com/album.jpg',
       };
 
       expect(album.id).toBe('album-id');
       expect(album.name).toBe('Test Album');
       expect(album.artist).toBe('Test Artist');
       expect(album.songCount).toBe(10);
-      expect(album.imageUrl).toBe('http://example.com/album.jpg');
+      expect(album.coverArt).toBe('http://example.com/album.jpg');
     });
 
     it('should define Genre interface correctly', () => {

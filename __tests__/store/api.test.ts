@@ -372,7 +372,7 @@ describe('API Slice', () => {
                     name: 'Test Album',
                     artist: 'Test Artist',
                     songCount: 10,
-                    imageUrl: 'http://example.com/cover/cover1',
+                    coverArt: 'http://example.com/cover/cover1',
                 },
             ]);
         });
@@ -453,19 +453,19 @@ describe('API Slice', () => {
                     id: 'artist1',
                     name: 'Artist A',
                     albumCount: 5,
-                    imageUrl: 'http://example.com/cover/cover1',
+                    coverArt: 'http://example.com/cover/cover1',
                 },
                 {
                     id: 'artist2',
                     name: 'Artist B',
                     albumCount: 3,
-                    imageUrl: undefined,
+                    coverArt: undefined,
                 },
                 {
                     id: 'artist3',
                     name: 'Artist C',
                     albumCount: 2,
-                    imageUrl: undefined,
+                    coverArt: undefined,
                 },
             ]);
         });

@@ -197,7 +197,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         name: album.name,
         artist: album.artist,
         songCount: album.songCount,
-        imageUrl: album.coverArt ? getCoverArtUrl(album.coverArt) : undefined,
+        coverArt: album.coverArt ? getCoverArtUrl(album.coverArt) : undefined,
       }));
     } else {
       throw new Error(
@@ -233,7 +233,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             id: artist.id,
             name: artist.name,
             albumCount: artist.albumCount || 0,
-            imageUrl: artist.coverArt ? getCoverArtUrl(artist.coverArt) : undefined,
+            coverArt: artist.coverArt ? getCoverArtUrl(artist.coverArt) : undefined,
           }));
           allArtists = [...allArtists, ...artistsInIndex];
         }

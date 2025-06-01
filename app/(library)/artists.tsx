@@ -53,8 +53,8 @@ export default function ArtistsScreen() {
       }}
     >
       <View style={styles.artistItemLeft}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.artistImage} />
+        {item.coverArt ? (
+          <Image source={{ uri: item.coverArt }} style={styles.artistImage} />
         ) : (
           <View
             style={[styles.artistIcon, { backgroundColor: colors.surface }]}

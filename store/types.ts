@@ -23,7 +23,7 @@ export interface Artist {
   id: string;
   name: string;
   albumCount?: number;
-  imageUrl?: string;
+  coverArt?: string;
 }
 
 /**
@@ -34,7 +34,7 @@ export interface Album {
   name: string;
   artist: string;
   songCount: number;
-  imageUrl?: string;
+  coverArt?: string;
 }
 
 /**

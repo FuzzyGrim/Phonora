@@ -56,8 +56,8 @@ export default function AlbumsScreen() {
       }}
     >
       <View style={styles.albumImageContainer}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.albumImage} />
+        {item.coverArt ? (
+          <Image source={{ uri: item.coverArt }} style={styles.albumImage} />
         ) : (
           <View
             style={[
