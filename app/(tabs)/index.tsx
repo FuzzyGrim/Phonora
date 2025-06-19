@@ -5,9 +5,9 @@ import { Music2, Pause, Play, WifiOff } from "lucide-react-native";
 import React from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,8 +24,11 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const {
     isLoading,
+    isLoadingMore,
     error,
     fetchSongs,
+    fetchMoreSongs,
+    clearSongs,
     getCoverArtUrl,
     pauseSong,
     resumeSong,
@@ -43,10 +46,145 @@ export default function HomeScreen() {
   const onRefresh = React.useCallback(async () => {
     if (!isOfflineMode) {
       setRefreshing(true);
+      // Clear existing songs and fetch fresh ones
+      clearSongs();
       await fetchSongs();
       setRefreshing(false);
     }
-  }, [fetchSongs, isOfflineMode]);
+  }, [fetchSongs, clearSongs, isOfflineMode]);
+
+  const handleLoadMore = React.useCallback(async () => {
+    if (!isOfflineMode && !isLoadingMore && !isLoading) {
+      await fetchMoreSongs();
+    }
+  }, [fetchMoreSongs, isOfflineMode, isLoadingMore, isLoading]);
+
+  const renderSongItem = ({ item: song }: { item: Song }) => (
+    <TouchableOpacity key={song.id} style={getSongCardStyle(song)}>
+      {song.coverArt && getCoverImageSource(song) ? (
+        <Image
+          source={getCoverImageSource(song)!}
+          style={styles.coverArt}
+        />
+      ) : (
+        <View
+          style={[
+            styles.placeholderCover,
+            { backgroundColor: colors.border },
+          ]}
+        >
+          <Music2 size={24} color={colors.textSecondary} />
+        </View>
+      )}
+      <View style={styles.songInfo}>
+        <Text
+          style={[styles.songTitle, { color: colors.text }]}
+          numberOfLines={1}
+        >
+          {song.title}
+        </Text>
+        <Text
+          style={[styles.artistName, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {song.artist}
+        </Text>
+        <Text
+          style={[styles.albumName, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {song.album}
+        </Text>
+      </View>
+      <View style={styles.songActions}>
+        <Text
+          style={[styles.duration, { color: colors.textSecondary }]}
+        >
+          {formatDuration(song.duration)}
+        </Text>
+        <TouchableOpacity
+          style={[
+            styles.playButton,
+            { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handlePlayPress(song)}
+        >
+          {(() => {
+            const isCurrentSong = playback.currentSong?.id === song.id;
+            return isCurrentSong && playback.isPlaying ? (
+              <Pause size={16} color={colors.text} />
+            ) : (
+              <Play size={16} color={colors.text} />
+            );
+          })()}
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.footerLoaderText, { color: colors.textSecondary }]}>
+          Loading more songs...
+        </Text>
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Music2 size={48} color={colors.textSecondary} />
+      <Text
+        style={[styles.emptyStateText, { color: colors.textSecondary }]}
+      >
+        {isOfflineMode
+          ? "No cached songs available for offline playback"
+          : "No songs available"}
+      </Text>
+      {isOfflineMode && (
+        <Text
+          style={[
+            styles.emptyStateSubtext,
+            { color: colors.textSecondary },
+          ]}
+        >
+          Connect to the internet to browse and cache music
+        </Text>
+      )}
+    </View>
+  );
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerContent}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {isOfflineMode ? "Offline Music" : "Your Music"}
+        </Text>
+        {isOfflineMode && (
+          <View style={styles.offlineIndicator}>
+            <WifiOff size={16} color={colors.textSecondary} />
+            <Text
+              style={[styles.offlineText, { color: colors.textSecondary }]}
+            >
+              Offline
+            </Text>
+          </View>
+        )}
+      </View>
+      {!networkState.isConnected && (
+        <View
+          style={[styles.networkBanner, { backgroundColor: colors.error }]}
+        >
+          <Text style={[styles.networkBannerText, { color: colors.text }]}>
+            No internet connection. Offline mode enabled automatically.
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 
   const handlePlayPress = async (song: Song) => {
     if (playback.currentSong?.id === song.id) {
@@ -125,130 +263,27 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          enabled={!isOfflineMode}
-        />
-      }
-    >
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            {isOfflineMode ? "Offline Music" : "Your Music"}
-          </Text>
-          {isOfflineMode && (
-            <View style={styles.offlineIndicator}>
-              <WifiOff size={16} color={colors.textSecondary} />
-              <Text
-                style={[styles.offlineText, { color: colors.textSecondary }]}
-              >
-                Offline
-              </Text>
-            </View>
-          )}
-        </View>
-        {!networkState.isConnected && (
-          <View
-            style={[styles.networkBanner, { backgroundColor: colors.error }]}
-          >
-            <Text style={[styles.networkBannerText, { color: colors.text }]}>
-              No internet connection. Offline mode enabled automatically.
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.content}>
-        {availableSongs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Music2 size={48} color={colors.textSecondary} />
-            <Text
-              style={[styles.emptyStateText, { color: colors.textSecondary }]}
-            >
-              {isOfflineMode
-                ? "No cached songs available for offline playback"
-                : "No songs available"}
-            </Text>
-            {isOfflineMode && (
-              <Text
-                style={[
-                  styles.emptyStateSubtext,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Connect to the internet to browse and cache music
-              </Text>
-            )}
-          </View>
-        ) : (
-          availableSongs.map((song: Song) => (
-            <TouchableOpacity key={song.id} style={getSongCardStyle(song)}>
-              {song.coverArt && getCoverImageSource(song) ? (
-                <Image
-                  source={getCoverImageSource(song)!}
-                  style={styles.coverArt}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.placeholderCover,
-                    { backgroundColor: colors.border },
-                  ]}
-                >
-                  <Music2 size={24} color={colors.textSecondary} />
-                </View>
-              )}
-              <View style={styles.songInfo}>
-                <Text
-                  style={[styles.songTitle, { color: colors.text }]}
-                  numberOfLines={1}
-                >
-                  {song.title}
-                </Text>
-                <Text
-                  style={[styles.artistName, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                >
-                  {song.artist}
-                </Text>
-                <Text
-                  style={[styles.albumName, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                >
-                  {song.album}
-                </Text>
-              </View>
-              <View style={styles.songActions}>
-                <Text
-                  style={[styles.duration, { color: colors.textSecondary }]}
-                >
-                  {formatDuration(song.duration)}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.playButton,
-                    { backgroundColor: colors.primary },
-                  ]}
-                  onPress={() => handlePlayPress(song)}
-                >
-                  {(() => {
-                    const isCurrentSong = playback.currentSong?.id === song.id;
-                    return isCurrentSong && playback.isPlaying ? (
-                      <Pause size={16} color={colors.text} />
-                    ) : (
-                      <Play size={16} color={colors.text} />
-                    );
-                  })()}
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
-    </ScrollView>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FlatList
+        data={availableSongs}
+        renderItem={renderSongItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={renderFooter}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            enabled={!isOfflineMode}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.1}
+        contentContainerStyle={availableSongs.length === 0 ? styles.emptyContainer : styles.content}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 }
 
@@ -282,6 +317,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
@@ -304,6 +345,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     textAlign: "center",
+  },
+  footerLoader: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  footerLoaderText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 14,
+    marginTop: 8,
   },
   header: {
     padding: 20,

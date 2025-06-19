@@ -10,13 +10,17 @@ import { Song, SearchResults, Album, Artist, Genre, Playlist } from "./types";
 export interface ApiSlice {
   // State
   songs: Song[];
+  fetchedSongIds: Set<string>;
   searchResults: SearchResults | null;
   isLoading: boolean;
+  isLoadingMore: boolean;
   isSearching: boolean;
   error: string | null;
 
   // Actions
   fetchSongs: () => Promise<void>;
+  fetchMoreSongs: () => Promise<void>;
+  clearSongs: () => void;
   fetchAlbums: () => Promise<Album[]>;
   fetchArtists: () => Promise<Artist[]>;
   fetchGenres: () => Promise<Genre[]>;
@@ -32,10 +36,19 @@ export interface ApiSlice {
 export const createApiSlice = (set: any, get: any): ApiSlice => ({
   // Initial state
   songs: [],
+  fetchedSongIds: new Set<string>(),
   searchResults: null,
   isLoading: false,
+  isLoadingMore: false,
   isSearching: false,
   error: null,
+
+  /**
+   * Clear all songs and reset the fetched IDs
+   */
+  clearSongs: () => {
+    set({ songs: [], fetchedSongIds: new Set<string>() });
+  },
 
   /**
    * Generate URL for fetching cover art images
@@ -59,7 +72,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
 
   /**
    * Fetch a random selection of songs from the server
-   * Used to populate the home screen
+   * Used to populate the home screen (initial load)
    */
   fetchSongs: async () => {
     const { config, generateAuthParams } = get();
@@ -76,7 +89,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
 
       if (data["subsonic-response"].status === "ok") {
         // Map the server response to our Song interface
-        const songs = data["subsonic-response"].randomSongs.song.map(
+        const newSongs = data["subsonic-response"].randomSongs.song.map(
           (song: any) => ({
             id: song.id,
             title: song.title,
@@ -86,7 +99,17 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             coverArt: song.coverArt,
           }),
         );
-        set({ songs, isLoading: false });
+
+        // Filter out duplicates and update fetchedSongIds
+        const { fetchedSongIds } = get();
+        const uniqueSongs = newSongs.filter((song: Song) => !fetchedSongIds.has(song.id));
+        const newFetchedSongIds = new Set([...fetchedSongIds, ...uniqueSongs.map((song: Song) => song.id)]);
+
+        set({
+          songs: uniqueSongs,
+          fetchedSongIds: newFetchedSongIds,
+          isLoading: false
+        });
 
         // Update cached songs list after fetching new songs
         get().loadCachedSongs();
@@ -99,6 +122,58 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
       set({
         error: error instanceof Error ? error.message : "Failed to fetch songs",
         isLoading: false,
+      });
+    }
+  },
+
+  /**
+   * Fetch more random songs for infinite scrolling
+   */
+  fetchMoreSongs: async () => {
+    const { config, generateAuthParams, isLoadingMore } = get();
+    if (!config || isLoadingMore) return;
+
+    set({ isLoadingMore: true, error: null });
+
+    try {
+      const params = generateAuthParams();
+      const response = await fetch(
+        `${config.serverUrl}/rest/getRandomSongs.view?size=50&${params.toString()}`,
+      );
+      const data = await response.json();
+
+      if (data["subsonic-response"].status === "ok") {
+        // Map the server response to our Song interface
+        const newSongs = data["subsonic-response"].randomSongs.song.map(
+          (song: any) => ({
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            duration: song.duration,
+            coverArt: song.coverArt,
+          }),
+        );
+
+        // Filter out duplicates and append unique songs
+        const { songs, fetchedSongIds } = get();
+        const uniqueSongs = newSongs.filter((song: Song) => !fetchedSongIds.has(song.id));
+        const newFetchedSongIds = new Set([...fetchedSongIds, ...uniqueSongs.map((song: Song) => song.id)]);
+
+        set({
+          songs: [...songs, ...uniqueSongs],
+          fetchedSongIds: newFetchedSongIds,
+          isLoadingMore: false
+        });
+      } else {
+        throw new Error(
+          data["subsonic-response"].error?.message || "Failed to fetch more songs",
+        );
+      }
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Failed to fetch more songs",
+        isLoadingMore: false,
       });
     }
   },
@@ -128,31 +203,31 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         // Create empty arrays if any part of the response is missing
         const artists = searchData.artist
           ? searchData.artist.map((artist: any) => ({
-              id: artist.id,
-              name: artist.name,
-            }))
+            id: artist.id,
+            name: artist.name,
+          }))
           : [];
 
         const albums = searchData.album
           ? searchData.album.map((album: any) => ({
-              id: album.id,
-              name: album.name,
-              artist: album.artist,
-              artistId: album.artistId,
-              coverArt: album.coverArt,
-              songCount: album.songCount || 0,
-            }))
+            id: album.id,
+            name: album.name,
+            artist: album.artist,
+            artistId: album.artistId,
+            coverArt: album.coverArt,
+            songCount: album.songCount || 0,
+          }))
           : [];
 
         const songs = searchData.song
           ? searchData.song.map((song: any) => ({
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              album: song.album,
-              duration: song.duration,
-              coverArt: song.coverArt,
-            }))
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            duration: song.duration,
+            coverArt: song.coverArt,
+          }))
           : [];
 
         set({
