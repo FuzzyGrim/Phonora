@@ -22,6 +22,7 @@ export interface AuthSlice {
   generateAuthParams: () => URLSearchParams;
   setUserSettings: (settings: UserSettings) => Promise<void>;
   initializeAuth: () => Promise<void>;
+  clearAllData: () => Promise<void>;
 }
 
 /**
@@ -122,5 +123,62 @@ export const createAuthSlice = (set: any, get: any): AuthSlice => ({
       c: "subsonicapp", // Client ID
       f: "json", // Response format
     });
+  },
+
+  /**
+   * Clear all app data including credentials, user settings, and cache
+   * This will reset the app to its initial state
+   */
+  clearAllData: async () => {
+    try {
+      // Stop any currently playing audio first
+      const { playback, stopSong } = get();
+      if (playback?.player) {
+        await stopSong();
+      }
+
+      // Clear credentials from secure storage
+      await SecureStore.deleteItemAsync("subsonic_credentials");
+
+      // Clear user settings from AsyncStorage
+      await AsyncStorage.removeItem("user_settings");
+
+      // Clear cache using the cache slice
+      const { clearCache } = get();
+      await clearCache();
+
+      // Reset all state to initial values
+      set({
+        // Auth state
+        config: null,
+        isAuthenticated: false,
+        userSettings: DEFAULT_USER_SETTINGS,
+
+        // General state
+        isLoading: false,
+        error: null,
+        isSearching: false,
+        searchResults: null,
+
+        // Cache state
+        cachedSongs: [],
+
+        // Playback state
+        playback: {
+          isPlaying: false,
+          currentSong: null,
+          player: null,
+        },
+        currentPlaylist: null,
+        isRepeat: false,
+        isShuffle: false,
+        repeatMode: "off",
+      });
+
+      console.log("All app data cleared successfully");
+    } catch (error) {
+      console.error("Error clearing all data:", error);
+      throw error;
+    }
   },
 });
