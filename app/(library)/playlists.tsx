@@ -73,7 +73,11 @@ export default function PlaylistsScreen() {
           </View>
         )}
         <View style={styles.playlistDetails}>
-          <Text style={[styles.playlistName, { color: colors.text }]}>
+          <Text
+            style={[styles.playlistName, { color: colors.text }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {item.name}
           </Text>
           <Text style={[styles.playlistCount, { color: colors.textSecondary }]}>
@@ -180,6 +184,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   playlistDetails: {
+    flex: 1,
     marginLeft: 15,
   },
   playlistIcon: {
@@ -203,6 +208,7 @@ const styles = StyleSheet.create({
   },
   playlistItemLeft: {
     alignItems: "center",
+    flex: 1,
     flexDirection: "row",
   },
   playlistName: {

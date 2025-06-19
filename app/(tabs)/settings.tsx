@@ -349,7 +349,7 @@ export default function SettingsScreen() {
                   setError(null);
                   setSuccess(false);
                 }}
-                placeholder="https://your-server.com/subsonic"
+                placeholder="https://your-server.com"
                 placeholderTextColor={colors.textSecondary}
                 autoCapitalize="none"
                 autoCorrect={false}
