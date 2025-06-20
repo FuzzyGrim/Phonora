@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 
 export default function MiniPlayer() {
   const { colors } = useTheme();
-  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl, getCoverArtUrlCached } =
+  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrlCached } =
     useMusicPlayerStore();
   const router = useRouter();
   const [coverArtUrl, setCoverArtUrl] = useState<string>("");
@@ -46,10 +46,7 @@ export default function MiniPlayer() {
     >
       <View style={styles.songInfo}>
         {coverArtUrl ? (
-          <Image
-            source={{ uri: coverArtUrl }}
-            style={styles.coverArt}
-          />
+          <Image source={{ uri: coverArtUrl }} style={styles.coverArt} />
         ) : (
           <View
             style={[

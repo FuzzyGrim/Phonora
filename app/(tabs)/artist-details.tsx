@@ -94,12 +94,12 @@ export default function ArtistDetailsScreen() {
           const artistInfo = artistData["subsonic-response"].artist;
           const formattedAlbums: ArtistAlbum[] = artistInfo.album
             ? artistInfo.album.map((album: any) => ({
-              id: album.id,
-              name: album.name,
-              coverArt: album.coverArt,
-              songCount: album.songCount,
-              year: album.year,
-            }))
+                id: album.id,
+                name: album.name,
+                coverArt: album.coverArt,
+                songCount: album.songCount,
+                year: album.year,
+              }))
             : [];
 
           setArtist({
@@ -156,7 +156,7 @@ export default function ArtistDetailsScreen() {
         } else {
           throw new Error(
             artistData["subsonic-response"].error?.message ||
-            "Failed to fetch artist details",
+              "Failed to fetch artist details",
           );
         }
       } catch (error) {
@@ -378,13 +378,13 @@ const styles = StyleSheet.create({
     height: 120,
     justifyContent: "center",
     marginBottom: 15,
-    width: 120,
     overflow: "hidden",
+    width: 120,
   },
   artistImage: {
-    width: "100%",
-    height: "100%",
     borderRadius: 60,
+    height: "100%",
+    width: "100%",
   },
   artistName: {
     fontFamily: "Inter-Bold",

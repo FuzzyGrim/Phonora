@@ -209,11 +209,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 4,
   },
-  playlistOwner: {
-    fontFamily: "Inter-Regular",
-    fontSize: 12,
-    marginTop: 2,
-  },
   title: {
     fontFamily: "Inter-Bold",
     fontSize: 32,

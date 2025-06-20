@@ -122,13 +122,18 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
 
         // Filter out duplicates and update fetchedSongIds
         const { fetchedSongIds } = get();
-        const uniqueSongs = newSongs.filter((song: Song) => !fetchedSongIds.has(song.id));
-        const newFetchedSongIds = new Set([...fetchedSongIds, ...uniqueSongs.map((song: Song) => song.id)]);
+        const uniqueSongs = newSongs.filter(
+          (song: Song) => !fetchedSongIds.has(song.id),
+        );
+        const newFetchedSongIds = new Set([
+          ...fetchedSongIds,
+          ...uniqueSongs.map((song: Song) => song.id),
+        ]);
 
         set({
           songs: uniqueSongs,
           fetchedSongIds: newFetchedSongIds,
-          isLoading: false
+          isLoading: false,
         });
 
         // Update cached songs list after fetching new songs
@@ -177,22 +182,29 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
 
         // Filter out duplicates and append unique songs
         const { songs, fetchedSongIds } = get();
-        const uniqueSongs = newSongs.filter((song: Song) => !fetchedSongIds.has(song.id));
-        const newFetchedSongIds = new Set([...fetchedSongIds, ...uniqueSongs.map((song: Song) => song.id)]);
+        const uniqueSongs = newSongs.filter(
+          (song: Song) => !fetchedSongIds.has(song.id),
+        );
+        const newFetchedSongIds = new Set([
+          ...fetchedSongIds,
+          ...uniqueSongs.map((song: Song) => song.id),
+        ]);
 
         set({
           songs: [...songs, ...uniqueSongs],
           fetchedSongIds: newFetchedSongIds,
-          isLoadingMore: false
+          isLoadingMore: false,
         });
       } else {
         throw new Error(
-          data["subsonic-response"].error?.message || "Failed to fetch more songs",
+          data["subsonic-response"].error?.message ||
+            "Failed to fetch more songs",
         );
       }
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to fetch more songs",
+        error:
+          error instanceof Error ? error.message : "Failed to fetch more songs",
         isLoadingMore: false,
       });
     }
@@ -223,31 +235,31 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         // Create empty arrays if any part of the response is missing
         const artists = searchData.artist
           ? searchData.artist.map((artist: any) => ({
-            id: artist.id,
-            name: artist.name,
-          }))
+              id: artist.id,
+              name: artist.name,
+            }))
           : [];
 
         const albums = searchData.album
           ? searchData.album.map((album: any) => ({
-            id: album.id,
-            name: album.name,
-            artist: album.artist,
-            artistId: album.artistId,
-            coverArt: album.coverArt,
-            songCount: album.songCount || 0,
-          }))
+              id: album.id,
+              name: album.name,
+              artist: album.artist,
+              artistId: album.artistId,
+              coverArt: album.coverArt,
+              songCount: album.songCount || 0,
+            }))
           : [];
 
         const songs = searchData.song
           ? searchData.song.map((song: any) => ({
-            id: song.id,
-            title: song.title,
-            artist: song.artist,
-            album: song.album,
-            duration: song.duration,
-            coverArt: song.coverArt,
-          }))
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration: song.duration,
+              coverArt: song.coverArt,
+            }))
           : [];
 
         set({

@@ -62,16 +62,10 @@ export default function HomeScreen() {
   const renderSongItem = ({ item: song }: { item: Song }) => (
     <TouchableOpacity key={song.id} style={getSongCardStyle(song)}>
       {song.coverArt && getCoverImageSource(song) ? (
-        <Image
-          source={getCoverImageSource(song)!}
-          style={styles.coverArt}
-        />
+        <Image source={getCoverImageSource(song)!} style={styles.coverArt} />
       ) : (
         <View
-          style={[
-            styles.placeholderCover,
-            { backgroundColor: colors.border },
-          ]}
+          style={[styles.placeholderCover, { backgroundColor: colors.border }]}
         >
           <Music2 size={24} color={colors.textSecondary} />
         </View>
@@ -97,16 +91,11 @@ export default function HomeScreen() {
         </Text>
       </View>
       <View style={styles.songActions}>
-        <Text
-          style={[styles.duration, { color: colors.textSecondary }]}
-        >
+        <Text style={[styles.duration, { color: colors.textSecondary }]}>
           {formatDuration(song.duration)}
         </Text>
         <TouchableOpacity
-          style={[
-            styles.playButton,
-            { backgroundColor: colors.primary },
-          ]}
+          style={[styles.playButton, { backgroundColor: colors.primary }]}
           onPress={() => handlePlayPress(song)}
         >
           {(() => {
@@ -127,7 +116,9 @@ export default function HomeScreen() {
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[styles.footerLoaderText, { color: colors.textSecondary }]}>
+        <Text
+          style={[styles.footerLoaderText, { color: colors.textSecondary }]}
+        >
           Loading more songs...
         </Text>
       </View>
@@ -137,19 +128,14 @@ export default function HomeScreen() {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Music2 size={48} color={colors.textSecondary} />
-      <Text
-        style={[styles.emptyStateText, { color: colors.textSecondary }]}
-      >
+      <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
         {isOfflineMode
           ? "No cached songs available for offline playback"
           : "No songs available"}
       </Text>
       {isOfflineMode && (
         <Text
-          style={[
-            styles.emptyStateSubtext,
-            { color: colors.textSecondary },
-          ]}
+          style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}
         >
           Connect to the internet to browse and cache music
         </Text>
@@ -166,18 +152,14 @@ export default function HomeScreen() {
         {isOfflineMode && (
           <View style={styles.offlineIndicator}>
             <WifiOff size={16} color={colors.textSecondary} />
-            <Text
-              style={[styles.offlineText, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.offlineText, { color: colors.textSecondary }]}>
               Offline
             </Text>
           </View>
         )}
       </View>
       {!networkState.isConnected && (
-        <View
-          style={[styles.networkBanner, { backgroundColor: colors.error }]}
-        >
+        <View style={[styles.networkBanner, { backgroundColor: colors.error }]}>
           <Text style={[styles.networkBannerText, { color: colors.text }]}>
             No internet connection. Offline mode enabled automatically.
           </Text>
@@ -280,7 +262,9 @@ export default function HomeScreen() {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.1}
-        contentContainerStyle={availableSongs.length === 0 ? styles.emptyContainer : styles.content}
+        contentContainerStyle={
+          availableSongs.length === 0 ? styles.emptyContainer : styles.content
+        }
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -318,9 +302,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptyContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 20,
   },
   emptyState: {

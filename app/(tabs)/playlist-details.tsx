@@ -86,14 +86,14 @@ export default function PlaylistDetailsScreen() {
           const playlistInfo = playlistData["subsonic-response"].playlist;
           const formattedSongs: PlaylistSong[] = playlistInfo.entry
             ? playlistInfo.entry.map((song: any) => ({
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              album: song.album,
-              duration: song.duration,
-              track: song.track,
-              coverArt: song.coverArt,
-            }))
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                album: song.album,
+                duration: song.duration,
+                track: song.track,
+                coverArt: song.coverArt,
+              }))
             : [];
 
           // Calculate total duration if not provided
@@ -117,7 +117,7 @@ export default function PlaylistDetailsScreen() {
         } else {
           throw new Error(
             playlistData["subsonic-response"].error?.message ||
-            "Failed to fetch playlist details",
+              "Failed to fetch playlist details",
           );
         }
       } catch (error) {

@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store";
-import { UserSettings } from "@/store/types";
 import {
   CircleCheck as CheckCircle2,
   Circle as XCircle,
@@ -34,7 +33,7 @@ export default function SettingsScreen() {
     userSettings,
     setUserSettings,
     networkState,
-    clearAllData
+    clearAllData,
   } = useMusicPlayerStore();
   const [serverUrl, setServerUrl] = useState(config?.serverUrl || "");
   const [username, setUsername] = useState(config?.username || "");
@@ -187,38 +186,6 @@ export default function SettingsScreen() {
     setMaxCacheSizeInput(newSize.toString());
   };
 
-  const handleClearCache = () => {
-    Alert.alert(
-      "Clear Cache",
-      "Are you sure you want to clear all cached data? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Clear Cache",
-          onPress: async () => {
-            try {
-              // Clear the cache data
-              await setUserSettings((prev: UserSettings) => ({
-                ...prev,
-                offlineMode: false,
-                maxCacheSize: 10,
-              }));
-              setMaxCacheSize(10);
-              setMaxCacheSizeInput("10");
-              setSuccess(true);
-            } catch (error) {
-              setError("Failed to clear cache. Please try again.");
-            }
-          },
-        },
-      ],
-      { cancelable: true },
-    );
-  };
-
   const handleClearAllData = () => {
     Alert.alert(
       "Clear All Data",
@@ -249,34 +216,37 @@ export default function SettingsScreen() {
               Alert.alert(
                 "Success",
                 "All app data has been cleared successfully.",
-                [{
-                  text: "OK",
-                  onPress: async () => {
-                    // Small delay to allow the state to settle
-                    setTimeout(async () => {
-                      // Force re-initialization of the store to ensure clean state
-                      const { initializeStore } = useMusicPlayerStore.getState();
-                      await initializeStore();
+                [
+                  {
+                    text: "OK",
+                    onPress: async () => {
+                      // Small delay to allow the state to settle
+                      setTimeout(async () => {
+                        // Force re-initialization of the store to ensure clean state
+                        const { initializeStore } =
+                          useMusicPlayerStore.getState();
+                        await initializeStore();
 
-                      // Navigate to the home screen to ensure a fresh start
-                      router.replace("/(tabs)");
-                    }, 100);
-                  }
-                }]
+                        // Navigate to the home screen to ensure a fresh start
+                        router.replace("/(tabs)");
+                      }, 100);
+                    },
+                  },
+                ],
               );
             } catch (error) {
               console.error("Failed to clear all data:", error);
               Alert.alert(
                 "Error",
                 "Failed to clear all data. Please try again.",
-                [{ text: "OK" }]
+                [{ text: "OK" }],
               );
             } finally {
               setIsLoading(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -580,16 +550,20 @@ export default function SettingsScreen() {
               Data Management
             </Text>
             <Text
-              style={[styles.helperText, { color: colors.textSecondary, marginBottom: 16 }]}
+              style={[
+                styles.clearDataHelperText,
+                { color: colors.textSecondary },
+              ]}
             >
-              Clear all app data including server credentials, user settings, and cached files. This action cannot be undone.
+              Clear all app data including server credentials, user settings,
+              and cached files. This action cannot be undone.
             </Text>
             <TouchableOpacity
               style={[
                 styles.clearAllDataButton,
                 {
                   backgroundColor: colors.error + "20",
-                  borderColor: colors.error
+                  borderColor: colors.error,
                 },
                 isLoading && styles.buttonDisabled,
               ]}
@@ -599,7 +573,10 @@ export default function SettingsScreen() {
               <View style={styles.buttonContent}>
                 <Trash2 color={colors.error} size={18} />
                 <Text
-                  style={[styles.clearAllDataButtonText, { color: colors.error }]}
+                  style={[
+                    styles.clearAllDataButtonText,
+                    { color: colors.error },
+                  ]}
                 >
                   Clear All Data
                 </Text>
@@ -643,6 +620,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Medium",
     fontSize: 16,
     marginLeft: 10,
+  },
+  clearDataHelperText: {
+    fontFamily: "Inter-Regular",
+    fontSize: 12,
+    marginBottom: 16,
+    marginTop: 4,
   },
   container: {
     flex: 1,
@@ -756,18 +739,5 @@ const styles = StyleSheet.create({
   },
   warningText: {
     marginTop: 8,
-  },
-  clearCacheButton: {
-    alignItems: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 45,
-    justifyContent: "center",
-    marginTop: 12,
-  },
-  clearCacheButtonText: {
-    fontFamily: "Inter-Medium",
-    fontSize: 16,
-    marginLeft: 10,
   },
 });
