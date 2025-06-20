@@ -86,14 +86,14 @@ export default function PlaylistDetailsScreen() {
           const playlistInfo = playlistData["subsonic-response"].playlist;
           const formattedSongs: PlaylistSong[] = playlistInfo.entry
             ? playlistInfo.entry.map((song: any) => ({
-                id: song.id,
-                title: song.title,
-                artist: song.artist,
-                album: song.album,
-                duration: song.duration,
-                track: song.track,
-                coverArt: song.coverArt,
-              }))
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration: song.duration,
+              track: song.track,
+              coverArt: song.coverArt,
+            }))
             : [];
 
           // Calculate total duration if not provided
@@ -117,7 +117,7 @@ export default function PlaylistDetailsScreen() {
         } else {
           throw new Error(
             playlistData["subsonic-response"].error?.message ||
-              "Failed to fetch playlist details",
+            "Failed to fetch playlist details",
           );
         }
       } catch (error) {
@@ -282,6 +282,21 @@ export default function PlaylistDetailsScreen() {
             style={[styles.songItem, { borderBottomColor: colors.border }]}
             onPress={() => handlePlaySong(item)}
           >
+            {item.coverArt ? (
+              <Image
+                source={{ uri: getCoverArtUrl(item.coverArt) }}
+                style={styles.songCover}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.songPlaceholder,
+                  { backgroundColor: colors.cardBackground },
+                ]}
+              >
+                <Music size={20} color={colors.textSecondary} />
+              </View>
+            )}
             <View style={styles.songInfo}>
               <Text style={[styles.songTitle, { color: colors.text }]}>
                 {item.title}
@@ -389,6 +404,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Regular",
     fontSize: 14,
   },
+  songCover: {
+    borderRadius: 4,
+    height: 40,
+    marginRight: 12,
+    width: 40,
+  },
   songDuration: {
     fontFamily: "Inter-Regular",
     fontSize: 14,
@@ -404,6 +425,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 12,
+  },
+  songPlaceholder: {
+    alignItems: "center",
+    borderRadius: 4,
+    height: 40,
+    justifyContent: "center",
+    marginRight: 12,
+    width: 40,
   },
   songTitle: {
     fontFamily: "Inter-SemiBold",

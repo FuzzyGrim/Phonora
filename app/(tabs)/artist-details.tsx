@@ -39,6 +39,7 @@ interface ArtistDetails {
   name: string;
   albumCount?: number;
   albums: ArtistAlbum[];
+  coverArt?: string;
 }
 
 export default function ArtistDetailsScreen() {
@@ -93,12 +94,12 @@ export default function ArtistDetailsScreen() {
           const artistInfo = artistData["subsonic-response"].artist;
           const formattedAlbums: ArtistAlbum[] = artistInfo.album
             ? artistInfo.album.map((album: any) => ({
-                id: album.id,
-                name: album.name,
-                coverArt: album.coverArt,
-                songCount: album.songCount,
-                year: album.year,
-              }))
+              id: album.id,
+              name: album.name,
+              coverArt: album.coverArt,
+              songCount: album.songCount,
+              year: album.year,
+            }))
             : [];
 
           setArtist({
@@ -106,6 +107,7 @@ export default function ArtistDetailsScreen() {
             name: artistInfo.name,
             albumCount: artistInfo.albumCount,
             albums: formattedAlbums,
+            coverArt: artistInfo.coverArt,
           });
 
           // Now fetch songs for all albums
@@ -154,7 +156,7 @@ export default function ArtistDetailsScreen() {
         } else {
           throw new Error(
             artistData["subsonic-response"].error?.message ||
-              "Failed to fetch artist details",
+            "Failed to fetch artist details",
           );
         }
       } catch (error) {
@@ -254,7 +256,14 @@ export default function ArtistDetailsScreen() {
                 { backgroundColor: colors.surface },
               ]}
             >
-              <User size={50} color={colors.textSecondary} />
+              {artist.coverArt ? (
+                <Image
+                  source={{ uri: getCoverArtUrl(artist.coverArt) }}
+                  style={styles.artistImage}
+                />
+              ) : (
+                <User size={50} color={colors.textSecondary} />
+              )}
             </View>
             <Text style={[styles.artistName, { color: colors.text }]}>
               {artist.name}
@@ -370,6 +379,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
     width: 120,
+    overflow: "hidden",
+  },
+  artistImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 60,
   },
   artistName: {
     fontFamily: "Inter-Bold",
