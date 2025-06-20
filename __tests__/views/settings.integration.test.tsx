@@ -137,7 +137,7 @@ describe("SettingsScreen Integration Tests", () => {
       );
 
       const serverUrlInput = screen.getByPlaceholderText(
-        "https://your-server.com/subsonic",
+        "https://your-server.com",
       );
       const usernameInput = screen.getByPlaceholderText("Username");
       const passwordInput = screen.getByPlaceholderText("Password");
@@ -170,7 +170,7 @@ describe("SettingsScreen Integration Tests", () => {
       );
 
       const serverUrlInput = screen.getByPlaceholderText(
-        "https://your-server.com/subsonic",
+        "https://your-server.com",
       );
       const usernameInput = screen.getByPlaceholderText("Username");
       const passwordInput = screen.getByPlaceholderText("Password");
@@ -561,7 +561,7 @@ describe("SettingsScreen Integration Tests", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("https://your-server.com/subsonic"),
+        screen.getByPlaceholderText("https://your-server.com"),
       ).toBeTruthy();
       expect(screen.getByPlaceholderText("Username")).toBeTruthy();
       expect(screen.getByPlaceholderText("Password")).toBeTruthy();

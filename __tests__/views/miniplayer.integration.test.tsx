@@ -30,6 +30,7 @@ describe("MiniPlayer Integration Tests", () => {
   const mockResumeSong = jest.fn();
   const mockSkipToNext = jest.fn();
   const mockGetCoverArtUrl = jest.fn();
+  const mockGetCoverArtUrlCached = jest.fn();
 
   const mockSong = {
     id: "1",
@@ -49,12 +50,14 @@ describe("MiniPlayer Integration Tests", () => {
     resumeSong: mockResumeSong,
     skipToNext: mockSkipToNext,
     getCoverArtUrl: mockGetCoverArtUrl,
+    getCoverArtUrlCached: mockGetCoverArtUrlCached,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseMusicPlayerStore.mockReturnValue(defaultMockStore);
     mockGetCoverArtUrl.mockReturnValue("https://example.com/cover.jpg");
+    mockGetCoverArtUrlCached.mockResolvedValue("https://example.com/cover.jpg");
   });
 
   describe("Visibility Control", () => {

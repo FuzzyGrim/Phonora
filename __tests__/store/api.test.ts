@@ -46,6 +46,7 @@ describe("API Slice", () => {
       config: mockConfig,
       generateAuthParams: mockGenerateAuthParams,
       loadCachedSongs: jest.fn(),
+      fetchedSongIds: new Set<string>(),
     });
   });
 
@@ -154,6 +155,7 @@ describe("API Slice", () => {
             coverArt: "cover2",
           },
         ],
+        fetchedSongIds: new Set(["song1", "song2"]),
         isLoading: false,
       });
     });

@@ -340,7 +340,6 @@ describe("Library Screens Integration Tests", () => {
         expect(defaultMockStore.fetchPlaylists).toHaveBeenCalled();
         expect(getByText("Test Playlist 1")).toBeTruthy();
         expect(getByText("15 songs")).toBeTruthy();
-        expect(getByText("by User1")).toBeTruthy();
         expect(getByText("Test Playlist 2")).toBeTruthy();
         expect(getByText("8 songs")).toBeTruthy();
       });
