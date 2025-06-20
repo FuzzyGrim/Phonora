@@ -70,7 +70,7 @@ describe("Playback Slice", () => {
     // Setup default mock returns
     mockGet.mockReturnValue({
       playback: { isPlaying: false, currentSong: null, player: null },
-      currentSongList: null,
+      currentSongsList: null,
       userSettings: { offlineMode: false, maxCacheSize: 10 },
       isFileCached: jest.fn().mockResolvedValue(false),
       getCachedFilePath: jest.fn(() => "/cache/song123.mp3"),
@@ -89,7 +89,7 @@ describe("Playback Slice", () => {
         currentSong: null,
         player: null,
       });
-      expect(playbackSlice.currentSongList).toBeNull();
+      expect(playbackSlice.currentSongsList).toBeNull();
       expect(playbackSlice.isRepeat).toBe(false);
       expect(playbackSlice.isShuffle).toBe(false);
       expect(playbackSlice.repeatMode).toBe("off");
@@ -213,7 +213,7 @@ describe("Playback Slice", () => {
     it("should handle song finish event and auto-skip", async () => {
       mockGet.mockReturnValue({
         ...mockGet(),
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         skipToNext: jest.fn(),
       });
 
@@ -274,7 +274,7 @@ describe("Playback Slice", () => {
       await playbackSlice.playSongFromSource(mockSong, "library", mockSongs);
 
       expect(mockSet).toHaveBeenCalledWith({
-        currentSongList: {
+        currentSongsList: {
           source: "library",
           songs: mockSongs,
         },
@@ -376,7 +376,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -395,7 +395,7 @@ describe("Playback Slice", () => {
           currentSong: mockSong,
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "one",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -414,7 +414,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "all",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -436,7 +436,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "off",
         isShuffle: true,
         playSong: mockPlaySong,
@@ -456,7 +456,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -477,7 +477,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -496,7 +496,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongList: { source: "library", songs: mockSongs },
+        currentSongsList: { source: "library", songs: mockSongs },
         repeatMode: "all",
         isShuffle: false,
         playSong: mockPlaySong,

@@ -169,7 +169,7 @@ export const createAuthSlice = (set: any, get: any): AuthSlice => ({
           currentSong: null,
           player: null,
         },
-        currentSongList: null,
+        currentSongsList: null,
         isRepeat: false,
         isShuffle: false,
         repeatMode: "off",

@@ -95,7 +95,7 @@ describe("PlayerScreen Integration Tests", () => {
       },
     },
     songs: mockSongs,
-    currentSongList: null,
+    currentSongsList: null,
     repeatMode: "off" as const,
     isShuffle: false,
     playSongFromSource: mockPlaySongFromSource,
@@ -480,7 +480,7 @@ describe("PlayerScreen Integration Tests", () => {
 
       mockUseMusicPlayerStore.mockReturnValue({
         ...defaultMockStore,
-        currentSongList: {
+        currentSongsList: {
           id: "playlist1",
           name: "My Playlist",
           songs: playlistSongs,

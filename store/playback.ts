@@ -6,7 +6,7 @@ import { createAudioPlayer, setAudioModeAsync, AudioStatus } from "expo-audio";
 import {
   Song,
   PlaybackState,
-  CurrentSongList,
+  CurrentSongsList,
   RepeatMode,
   PlaylistSource,
 } from "./types";
@@ -17,7 +17,7 @@ import {
 export interface PlaybackSlice {
   // State
   playback: PlaybackState;
-  currentSongList: CurrentSongList | null;
+  currentSongsList: CurrentSongsList | null;
   isRepeat: boolean;
   isShuffle: boolean;
   repeatMode: RepeatMode;
@@ -53,7 +53,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     currentSong: null,
     player: null,
   },
-  currentSongList: null,
+  currentSongsList: null,
   isRepeat: false,
   isShuffle: false,
   repeatMode: "off",
@@ -178,12 +178,12 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         // When the song reaches the end (status.didJustFinish will be true)
         if (status.didJustFinish) {
           console.log(`Song finished: ${song.title}`);
-          // Check currentSongList state before calling skipToNext
-          const { currentSongList, repeatMode, isShuffle } = get();
-          console.log("Song finished - currentSongList state:", {
+          // Check currentSongsList state before calling skipToNext
+          const { currentSongsList, repeatMode, isShuffle } = get();
+          console.log("Song finished - currentSongsList state:", {
             hasCurrentSong: !!get().playback.currentSong,
-            hasPlaylist: !!currentSongList,
-            playlistLength: currentSongList?.songs?.length || 0,
+            hasPlaylist: !!currentSongsList,
+            playlistLength: currentSongsList?.songs?.length || 0,
             repeatMode,
             isShuffle,
           });
@@ -230,7 +230,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
   ) => {
     // Set the current playlist source
     set({
-      currentSongList: {
+      currentSongsList: {
         source,
         songs: sourceSongs,
       },
@@ -312,11 +312,11 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { currentSongList, playback, songs, repeatMode, isShuffle } = get();
+    const { currentSongsList, playback, songs, repeatMode, isShuffle } = get();
     console.log("skipToNext called", {
       hasSong: !!playback.currentSong,
-      hasPlaylist: !!currentSongList,
-      playlistLength: currentSongList?.songs?.length || 0,
+      hasPlaylist: !!currentSongsList,
+      playlistLength: currentSongsList?.songs?.length || 0,
       globalSongsLength: songs?.length || 0,
       repeatMode,
       isShuffle,
@@ -336,7 +336,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     }
 
     // Get the songs list to work with
-    const songsToUse = currentSongList?.songs || songs;
+    const songsToUse = currentSongsList?.songs || songs;
     if (!songsToUse || songsToUse.length === 0) {
       console.log("skipToNext returning: No songs available");
       return;
@@ -390,7 +390,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Skip to the previous song in the playlist
    */
   skipToPrevious: async () => {
-    const { currentSongList, playback, songs, repeatMode, isShuffle } = get();
+    const { currentSongsList, playback, songs, repeatMode, isShuffle } = get();
 
     // Check if we have a current song
     if (!playback.currentSong) {
@@ -405,7 +405,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     }
 
     // Get the songs list to work with
-    const songsToUse = currentSongList?.songs || songs;
+    const songsToUse = currentSongsList?.songs || songs;
     if (!songsToUse || songsToUse.length === 0) {
       return;
     }

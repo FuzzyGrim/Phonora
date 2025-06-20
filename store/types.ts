@@ -136,7 +136,7 @@ export type RepeatMode = "off" | "one" | "all";
 /**
  * Current song list information
  */
-export interface CurrentSongList {
+export interface CurrentSongsList {
   source: PlaylistSource;
   songs: Song[];
 }
