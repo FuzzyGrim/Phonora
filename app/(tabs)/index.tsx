@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   header: {
-    padding: 20,
+    paddingBottom: 20,
     paddingTop: 60,
   },
   headerContent: {
