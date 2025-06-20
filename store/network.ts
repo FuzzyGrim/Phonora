@@ -69,7 +69,13 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
    * Update network state and handle offline mode automatically
    */
   updateNetworkState: (networkState: NetworkState) => {
-    const { userSettings, setUserSettings, loadCachedSongs } = get();
+    const {
+      userSettings,
+      setUserSettings,
+      loadCachedSongs,
+      networkState: currentNetworkState,
+      isOfflineMode: currentOfflineMode,
+    } = get();
 
     // Check if we have no internet connection
     const hasNoInternet =
@@ -77,6 +83,16 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
 
     // Auto-enable offline mode when no internet connection
     const shouldBeOffline = userSettings.offlineMode || hasNoInternet;
+
+    // Check if there's actually a change in network state or offline mode
+    // Handle case where currentNetworkState might be undefined (e.g., in tests)
+    const hasNetworkStateChanged =
+      !currentNetworkState ||
+      currentNetworkState.isConnected !== networkState.isConnected ||
+      currentNetworkState.isInternetReachable !==
+        networkState.isInternetReachable ||
+      currentNetworkState.type !== networkState.type ||
+      currentOfflineMode !== shouldBeOffline;
 
     // If we're going offline due to network issues and offline mode isn't already enabled in settings,
     // automatically enable it in the user settings
@@ -99,16 +115,19 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
     });
 
     // If we just went offline, load cached songs
-    if (shouldBeOffline) {
+    if (shouldBeOffline && !currentOfflineMode) {
       loadCachedSongs();
     }
 
-    console.log("Network state updated:", {
-      isConnected: networkState.isConnected,
-      isInternetReachable: networkState.isInternetReachable,
-      isOfflineMode: shouldBeOffline,
-      offlineModeInSettings: userSettings.offlineMode,
-    });
+    // Only log when there's an actual change
+    if (hasNetworkStateChanged) {
+      console.log("Network state updated:", {
+        isConnected: networkState.isConnected,
+        isInternetReachable: networkState.isInternetReachable,
+        isOfflineMode: shouldBeOffline,
+        offlineModeInSettings: userSettings.offlineMode,
+      });
+    }
   },
 
   /**
