@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store";
@@ -7,9 +7,19 @@ import { useRouter } from "expo-router";
 
 export default function MiniPlayer() {
   const { colors } = useTheme();
-  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl } =
+  const { playback, pauseSong, resumeSong, skipToNext, getCoverArtUrl, getCoverArtUrlCached } =
     useMusicPlayerStore();
   const router = useRouter();
+  const [coverArtUrl, setCoverArtUrl] = useState<string>("");
+
+  // Load cover art URL when current song changes
+  useEffect(() => {
+    if (playback.currentSong?.coverArt) {
+      getCoverArtUrlCached(playback.currentSong.coverArt).then(setCoverArtUrl);
+    } else {
+      setCoverArtUrl("");
+    }
+  }, [playback.currentSong?.coverArt, getCoverArtUrlCached]);
 
   if (!playback.currentSong) return null;
 
@@ -35,9 +45,9 @@ export default function MiniPlayer() {
       onPress={openFullPlayer}
     >
       <View style={styles.songInfo}>
-        {playback.currentSong.coverArt ? (
+        {coverArtUrl ? (
           <Image
-            source={{ uri: getCoverArtUrl(playback.currentSong.coverArt) }}
+            source={{ uri: coverArtUrl }}
             style={styles.coverArt}
           />
         ) : (

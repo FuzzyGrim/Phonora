@@ -27,6 +27,7 @@ export interface ApiSlice {
   fetchPlaylists: () => Promise<Playlist[]>;
   search: (query: string) => Promise<void>;
   getCoverArtUrl: (id: string) => string;
+  getCoverArtUrlCached: (id: string) => Promise<string>;
   getStreamUrl: (id: string) => string;
 }
 
@@ -52,12 +53,31 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
 
   /**
    * Generate URL for fetching cover art images
+   * Returns server URL for cover art
    */
   getCoverArtUrl: (id: string) => {
     const { config, generateAuthParams } = get();
     if (!config) return "";
     const params = generateAuthParams();
     return `${config.serverUrl}/rest/getCoverArt.view?id=${id}&${params.toString()}`;
+  },
+
+  /**
+   * Get cover art URL, preferring cached version if available
+   */
+  getCoverArtUrlCached: async (id: string) => {
+    const { isFileCached, getCachedFilePath, getCoverArtUrl } = get();
+
+    try {
+      const isCached = await isFileCached(id, "jpg");
+      if (isCached) {
+        return getCachedFilePath(id, "jpg");
+      }
+      return getCoverArtUrl(id);
+    } catch (error) {
+      console.error("Error getting cached cover art URL:", error);
+      return getCoverArtUrl(id);
+    }
   },
 
   /**
