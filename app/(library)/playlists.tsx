@@ -83,13 +83,6 @@ export default function PlaylistsScreen() {
           <Text style={[styles.playlistCount, { color: colors.textSecondary }]}>
             {item.songCount} {item.songCount === 1 ? "song" : "songs"}
           </Text>
-          {item.owner && (
-            <Text
-              style={[styles.playlistOwner, { color: colors.textSecondary }]}
-            >
-              by {item.owner}
-            </Text>
-          )}
         </View>
       </View>
     </TouchableOpacity>
