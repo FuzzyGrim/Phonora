@@ -94,6 +94,30 @@ export default function TabLayout() {
             href: null, // This prevents it from being a root tab
           }}
         />
+        <Tabs.Screen
+          name="albums"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
+        <Tabs.Screen
+          name="artists"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
+        <Tabs.Screen
+          name="genres"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
+        <Tabs.Screen
+          name="playlists"
+          options={{
+            href: null, // This prevents it from being a root tab
+          }}
+        />
       </Tabs>
     </View>
   );

@@ -6,10 +6,10 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import LibraryScreen from "../../app/(tabs)/library";
-import AlbumsScreen from "../../app/(library)/albums";
-import ArtistsScreen from "../../app/(library)/artists";
-import PlaylistsScreen from "../../app/(library)/playlists";
-import GenresScreen from "../../app/(library)/genres";
+import AlbumsScreen from "../../app/(tabs)/albums";
+import ArtistsScreen from "../../app/(tabs)/artists";
+import PlaylistsScreen from "../../app/(tabs)/playlists";
+import GenresScreen from "../../app/(tabs)/genres";
 import { ThemeProvider } from "../../context/ThemeContext";
 import { useMusicPlayerStore } from "../../store";
 import { Album, Artist, Playlist, Genre } from "../../store/types";
@@ -70,7 +70,7 @@ describe("Library Screens Integration Tests", () => {
       );
 
       fireEvent.press(getByText("Playlists"));
-      expect(mockRouter.push).toHaveBeenCalledWith("/(library)/playlists");
+      expect(mockRouter.push).toHaveBeenCalledWith("/(tabs)/playlists");
     });
 
     it("should navigate to artists when artists item is tapped", () => {
@@ -83,7 +83,7 @@ describe("Library Screens Integration Tests", () => {
       );
 
       fireEvent.press(getByText("Artists"));
-      expect(mockRouter.push).toHaveBeenCalledWith("/(library)/artists");
+      expect(mockRouter.push).toHaveBeenCalledWith("/(tabs)/artists");
     });
 
     it("should navigate to albums when albums item is tapped", () => {
@@ -96,7 +96,7 @@ describe("Library Screens Integration Tests", () => {
       );
 
       fireEvent.press(getByText("Albums"));
-      expect(mockRouter.push).toHaveBeenCalledWith("/(library)/albums");
+      expect(mockRouter.push).toHaveBeenCalledWith("/(tabs)/albums");
     });
 
     it("should navigate to genres when genres item is tapped", () => {
@@ -109,7 +109,7 @@ describe("Library Screens Integration Tests", () => {
       );
 
       fireEvent.press(getByText("Genres"));
-      expect(mockRouter.push).toHaveBeenCalledWith("/(library)/genres");
+      expect(mockRouter.push).toHaveBeenCalledWith("/(tabs)/genres");
     });
   });
 
@@ -255,9 +255,10 @@ describe("Library Screens Integration Tests", () => {
 
       await waitFor(() => {
         fireEvent.press(getByText("Test Artist 1"));
-        expect(mockRouter.push).toHaveBeenCalledWith(
-          "/artist-details?id=artist1&name=Test%20Artist%201",
-        );
+        expect(mockRouter.push).toHaveBeenCalledWith({
+          pathname: "/(tabs)/artist-details",
+          params: { id: "artist1", name: "Test Artist 1" },
+        });
       });
     });
 

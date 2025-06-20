@@ -47,9 +47,10 @@ export default function ArtistsScreen() {
       style={[styles.artistItem, { borderBottomColor: colors.border }]}
       onPress={() => {
         // Navigate to artist details screen
-        router.push(
-          `/artist-details?id=${item.id}&name=${encodeURIComponent(item.name)}`,
-        );
+        router.push({
+          pathname: "/(tabs)/artist-details",
+          params: { id: item.id, name: item.name },
+        });
       }}
     >
       <View style={styles.artistItemLeft}>

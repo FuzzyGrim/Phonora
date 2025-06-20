@@ -14,10 +14,10 @@ export default function LibraryScreen() {
   const { colors } = useTheme();
 
   const menuItems = [
-    { icon: Disc, title: "Playlists", route: "/(library)/playlists" },
-    { icon: Users, title: "Artists", route: "/(library)/artists" },
-    { icon: Music, title: "Albums", route: "/(library)/albums" },
-    { icon: Tag, title: "Genres", route: "/(library)/genres" },
+    { icon: Disc, title: "Playlists", route: "/(tabs)/playlists" },
+    { icon: Users, title: "Artists", route: "/(tabs)/artists" },
+    { icon: Music, title: "Albums", route: "/(tabs)/albums" },
+    { icon: Tag, title: "Genres", route: "/(tabs)/genres" },
   ];
 
   return (
