@@ -15,7 +15,7 @@ import {
   CachedFileInfo,
   PlaylistSource,
   RepeatMode,
-  CurrentPlaylist,
+  CurrentSongList,
   DEFAULT_USER_SETTINGS,
 } from "../../store/types";
 
@@ -172,8 +172,8 @@ describe("Types Module", () => {
       });
     });
 
-    it("should define CurrentPlaylist interface correctly", () => {
-      const playlist: CurrentPlaylist = {
+    it("should define CurrentSongList interface correctly", () => {
+      const playlist: CurrentSongList = {
         source: "library",
         songs: [
           {

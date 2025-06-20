@@ -48,7 +48,7 @@ export default function PlayerScreen() {
     setPlaybackRate,
     playSongFromSource,
     seekToPosition,
-    currentPlaylist,
+    currentSongList,
     repeatMode,
     isShuffle,
     toggleRepeat,
@@ -72,7 +72,7 @@ export default function PlayerScreen() {
   }, [repeatMode]);
 
   // Get the appropriate list of songs to display
-  const songsToDisplay = currentPlaylist?.songs || songs;
+  const songsToDisplay = currentSongList?.songs || songs;
 
   // Define currentSong at component level
   const currentSong = playback.currentSong || {

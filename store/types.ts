@@ -134,9 +134,9 @@ export type PlaylistSource =
 export type RepeatMode = "off" | "one" | "all";
 
 /**
- * Current playlist information
+ * Current song list information
  */
-export interface CurrentPlaylist {
+export interface CurrentSongList {
   source: PlaylistSource;
   songs: Song[];
 }
