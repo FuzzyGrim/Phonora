@@ -49,6 +49,8 @@ describe("Cache Slice", () => {
       ),
       songs: [mockSong],
       cachedSongs: [],
+      saveSongMetadata: jest.fn().mockResolvedValue(undefined),
+      loadSongMetadata: jest.fn().mockResolvedValue({}),
     });
   });
 
@@ -330,6 +332,8 @@ describe("Cache Slice", () => {
         hasEnoughCacheSpace: jest.fn(),
         freeUpCacheSpace: jest.fn(),
         getStreamUrl: jest.fn(() => "http://example.com/stream/song123"),
+        saveSongMetadata: jest.fn().mockResolvedValue(undefined),
+        loadSongMetadata: jest.fn().mockResolvedValue({}),
       });
     });
 

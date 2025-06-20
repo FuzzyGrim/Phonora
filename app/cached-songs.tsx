@@ -34,7 +34,7 @@ interface CachedSongGroup {
 
 export default function CachedSongsScreen() {
   const { colors } = useTheme();
-  const { songs, clearCache } = useMusicPlayerStore();
+  const { songs, clearCache, loadSongMetadata } = useMusicPlayerStore();
   const [isLoading, setIsLoading] = useState(true);
   // const [cachedFiles, setCachedFiles] = useState<CachedFileInfo[]>([]);
   const [cachedSongs, setCachedSongs] = useState<CachedSongGroup[]>([]);
@@ -103,6 +103,9 @@ export default function CachedSongsScreen() {
         const cachedFileDetails = await Promise.all(fileInfoPromises);
         setTotalCacheSize(totalSize);
 
+        // Load cached song metadata
+        const cachedMetadata = await loadSongMetadata();
+
         // Group audio files with their cover images
         const audioFiles = cachedFileDetails.filter(
           (file) => file.extension === "mp3",
@@ -113,7 +116,22 @@ export default function CachedSongsScreen() {
         const songGroups: CachedSongGroup[] = [];
 
         for (const audioFile of audioFiles) {
-          const song = songs.find((s: Song) => s.id === audioFile.id);
+          // First try to find song in current store
+          let song = songs.find((s: Song) => s.id === audioFile.id);
+
+          // If not found in store, try cached metadata
+          if (!song && cachedMetadata[audioFile.id]) {
+            const metadata = cachedMetadata[audioFile.id];
+            song = {
+              id: audioFile.id,
+              title: metadata.title || "Unknown Song",
+              artist: metadata.artist || "Unknown Artist",
+              album: metadata.album || "Unknown Album",
+              duration: 0, // We don't store duration in metadata
+              coverArt: metadata.coverArt,
+            };
+          }
+
           if (song) {
             // Find matching image for this song if it exists
             const matchingImage = imageFiles.find(
@@ -132,7 +150,7 @@ export default function CachedSongsScreen() {
               imagePath: matchingImage?.path,
             });
           } else {
-            // Handle orphaned audio files (no matching song in state)
+            // Handle orphaned audio files (no matching song in store or metadata)
             songGroups.push({
               songId: audioFile.id,
               title: "Unknown Song",
@@ -153,7 +171,7 @@ export default function CachedSongsScreen() {
     };
 
     fetchCachedFiles();
-  }, [songs]);
+  }, [songs, loadSongMetadata]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -240,11 +258,12 @@ export default function CachedSongsScreen() {
               </Text>
             </View>
           ) : (
-            <>
+            <View style={styles.cachedSongsContainer}>
               <FlatList
                 data={cachedSongs}
                 keyExtractor={(item) => item.songId}
                 contentContainerStyle={styles.listContent}
+                style={styles.flatList}
                 renderItem={({ item }) => (
                   <View
                     style={[
@@ -348,7 +367,7 @@ export default function CachedSongsScreen() {
                   Clear Cache
                 </Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
       )}
@@ -360,16 +379,16 @@ const styles = StyleSheet.create({
   backButton: {
     marginRight: 12,
   },
+  cachedSongsContainer: {
+    flexShrink: 1,
+  },
   clearCacheButton: {
     alignItems: "center",
     borderRadius: 12,
-    bottom: 30,
     justifyContent: "center",
-    left: 0,
-    margin: 16,
-    padding: 16,
-    position: "absolute",
-    right: 0,
+    margin: 20,
+    marginBottom: 40,
+    padding: 20,
   },
   clearCacheButtonText: {
     fontFamily: "Inter-SemiBold",
@@ -392,6 +411,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Medium",
     fontSize: 18,
   },
+  flatList: {
+    flexGrow: 0,
+  },
   header: {
     alignItems: "center",
     flexDirection: "row",
@@ -400,7 +422,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 80,
+    paddingBottom: 16,
   },
   loadingContainer: {
     alignItems: "center",

@@ -7,6 +7,7 @@ import { Song, CachedFileInfo } from "./types";
 
 // Define a single cache directory for all files
 export const CACHE_DIRECTORY = FileSystem.cacheDirectory + "phonora_cache/";
+export const METADATA_FILE = CACHE_DIRECTORY + "metadata.json";
 
 // Track if a cache cleanup operation is in progress
 let cacheCleanupInProgress = false;
@@ -31,6 +32,8 @@ export interface CacheSlice {
   getCachedFiles: () => Promise<CachedFileInfo[]>;
   freeUpCacheSpace: (requiredSpace: number) => Promise<number>;
   loadCachedSongs: () => Promise<void>;
+  saveSongMetadata: (song: Song) => Promise<void>;
+  loadSongMetadata: () => Promise<{ [key: string]: Partial<Song> }>;
 }
 
 /**
@@ -229,6 +232,7 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
 
       let freedSpace = 0;
       const deletedFiles: string[] = [];
+      const deletedSongIds: string[] = [];
 
       for (const file of sortedFiles) {
         // Skip files that were already deleted in this session
@@ -243,6 +247,11 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
           deletedFiles.push(file.filename);
           recentlyDeletedFiles.add(file.path);
 
+          // Track song IDs for metadata cleanup
+          if (file.extension === "mp3") {
+            deletedSongIds.push(file.id);
+          }
+
           console.log(
             `Deleted ${file.filename} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`,
           );
@@ -253,6 +262,33 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
           }
         } catch (error) {
           console.error(`Error deleting file ${file.filename}:`, error);
+        }
+      }
+
+      // Clean up metadata for deleted songs
+      if (deletedSongIds.length > 0) {
+        try {
+          const existingMetadata = await get().loadSongMetadata();
+          let metadataChanged = false;
+
+          for (const songId of deletedSongIds) {
+            if (existingMetadata[songId]) {
+              delete existingMetadata[songId];
+              metadataChanged = true;
+            }
+          }
+
+          if (metadataChanged) {
+            await FileSystem.writeAsStringAsync(
+              METADATA_FILE,
+              JSON.stringify(existingMetadata, null, 2),
+            );
+            console.log(
+              `Cleaned up metadata for ${deletedSongIds.length} deleted songs`,
+            );
+          }
+        } catch (error) {
+          console.warn("Error cleaning up metadata:", error);
         }
       }
 
@@ -335,6 +371,9 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
 
         if (downloadResult.status === 200) {
           console.log(`Successfully cached song: ${song.title}`);
+
+          // Save song metadata
+          await get().saveSongMetadata(song);
 
           // Add to cached songs list if not already there
           const { cachedSongs } = get();
@@ -446,5 +485,56 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
     } catch (error) {
       console.error("Error loading cached songs:", error);
     }
+  },
+
+  /**
+   * Save song metadata to persistent storage
+   */
+  saveSongMetadata: async (song: Song) => {
+    try {
+      // Ensure cache directory exists
+      const directoryInfo = await FileSystem.getInfoAsync(CACHE_DIRECTORY);
+      if (!directoryInfo.exists) {
+        await FileSystem.makeDirectoryAsync(CACHE_DIRECTORY, {
+          intermediates: true,
+        });
+      }
+
+      // Load existing metadata
+      const existingMetadata = await get().loadSongMetadata();
+
+      // Add or update song metadata
+      existingMetadata[song.id] = {
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        coverArt: song.coverArt,
+      };
+
+      // Save updated metadata
+      await FileSystem.writeAsStringAsync(
+        METADATA_FILE,
+        JSON.stringify(existingMetadata, null, 2),
+      );
+    } catch (error) {
+      console.error("Error saving song metadata:", error);
+    }
+  },
+
+  /**
+   * Load song metadata from persistent storage
+   */
+  loadSongMetadata: async (): Promise<{ [key: string]: Partial<Song> }> => {
+    try {
+      const metadataInfo = await FileSystem.getInfoAsync(METADATA_FILE);
+      if (metadataInfo.exists) {
+        const metadataContent =
+          await FileSystem.readAsStringAsync(METADATA_FILE);
+        return JSON.parse(metadataContent);
+      }
+    } catch (error) {
+      console.warn("Error loading song metadata:", error);
+    }
+    return {};
   },
 });
