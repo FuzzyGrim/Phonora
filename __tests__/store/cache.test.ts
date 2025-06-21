@@ -475,10 +475,11 @@ describe("Cache Slice", () => {
       mockGet.mockReturnValue({
         ...mockGet(),
         getCachedFiles: jest.fn(),
+        loadSongMetadata: jest.fn(),
       });
     });
 
-    it("should load cached songs from file system", async () => {
+    it("should load cached songs from file system using saved metadata", async () => {
       const mockCachedFiles: CachedFileInfo[] = [
         {
           filename: "song123.mp3",
@@ -498,20 +499,68 @@ describe("Cache Slice", () => {
         },
       ];
 
+      const mockMetadata = {
+        song123: {
+          title: "Test Song",
+          artist: "Test Artist",
+          album: "Test Album",
+          duration: 180,
+          coverArt: "cover123",
+        },
+      };
+
       const mockGetCachedFiles = mockGet().getCachedFiles;
+      const mockLoadSongMetadata = mockGet().loadSongMetadata;
       mockGetCachedFiles.mockResolvedValue(mockCachedFiles);
+      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
 
       await cacheSlice.loadCachedSongs();
 
       expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: [mockSong], // Only the song that matches should be included
+        cachedSongs: [
+          {
+            id: "song123",
+            title: "Test Song",
+            artist: "Test Artist",
+            album: "Test Album",
+            duration: 180,
+            coverArt: "cover123",
+          },
+        ],
       });
     });
 
     it("should handle empty cached files", async () => {
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
       const mockGetCachedFiles = mockGet().getCachedFiles;
+      const mockLoadSongMetadata = mockGet().loadSongMetadata;
       mockGetCachedFiles.mockResolvedValue([]);
+      mockLoadSongMetadata.mockResolvedValue({});
+
+      await cacheSlice.loadCachedSongs();
+
+      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
+      expect(consoleSpy).toHaveBeenCalledWith("Loaded 0 cached songs");
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle cached files without metadata gracefully", async () => {
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const mockCachedFiles: CachedFileInfo[] = [
+        {
+          filename: "song123.mp3",
+          path: "/cache/song123.mp3",
+          id: "song123",
+          extension: "mp3",
+          size: 1024,
+          modTime: 0,
+        },
+      ];
+
+      const mockGetCachedFiles = mockGet().getCachedFiles;
+      const mockLoadSongMetadata = mockGet().loadSongMetadata;
+      mockGetCachedFiles.mockResolvedValue(mockCachedFiles);
+      mockLoadSongMetadata.mockResolvedValue({}); // No metadata saved
 
       await cacheSlice.loadCachedSongs();
 

@@ -113,12 +113,12 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         const audioCachePromise = isCached
           ? Promise.resolve(getCachedFilePath(song.id, "mp3"))
           : downloadSong(song).catch((err: any) => {
-            console.warn(
-              `Background audio caching failed for ${song.title}:`,
-              err,
-            );
-            return getStreamUrl(song.id);
-          });
+              console.warn(
+                `Background audio caching failed for ${song.title}:`,
+                err,
+              );
+              return getStreamUrl(song.id);
+            });
 
         // If the song has cover art, cache it also
         let imageCachePromise = Promise.resolve();
@@ -128,7 +128,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
             // Download image in the background, don't await
             // Image download will skip cache management and use the song's cleanup
             imageCachePromise = downloadImage(song.coverArt, song.title)
-              .then(() => { })
+              .then(() => {})
               .catch((err: any) =>
                 console.warn(
                   `Background image caching failed for ${song.coverArt}:`,
@@ -146,7 +146,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           console.log(`Playing cached song: ${song.title}`);
 
           // Let image download in background
-          imageCachePromise.catch(() => { });
+          imageCachePromise.catch(() => {});
         } else {
           // Use streaming URL while waiting for download
           const streamUrl = getStreamUrl(song.id);
@@ -154,7 +154,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
           // Let both downloads happen in background
           Promise.all([audioCachePromise, imageCachePromise])
-            .catch(() => { }) // Ignore errors to prevent app crashes
+            .catch(() => {}) // Ignore errors to prevent app crashes
             .finally(() =>
               console.log(
                 `Background caching operations completed for ${song.title}`,

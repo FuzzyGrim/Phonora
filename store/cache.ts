@@ -363,6 +363,8 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
           }
         }
 
+        console.log(`Caching song: ${song.title}`);
+
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           streamUrl,
@@ -432,6 +434,8 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
       userSettings.offlineMode || userSettings.maxCacheSize > 0;
     if (shouldCache) {
       try {
+        console.log(`Caching image for: ${songTitle}`);
+
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(
           coverArt,
@@ -459,23 +463,32 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
    */
   loadCachedSongs: async () => {
     try {
-      const { songs } = get();
       const cachedFiles = await get().getCachedFiles();
+      const savedMetadata = await get().loadSongMetadata();
 
       // Filter for audio files (.mp3)
       const audioFiles = cachedFiles.filter((file: CachedFileInfo) =>
         file.filename.endsWith(".mp3"),
       );
 
-      // Map cached files to songs
+      // Map cached files to songs using saved metadata
       const cachedSongs: Song[] = [];
       for (const file of audioFiles) {
         // Extract song ID from filename (remove .mp3 extension)
         const songId = file.filename.replace(".mp3", "");
 
-        // Find the corresponding song in the songs list
-        const song = songs.find((s: Song) => s.id === songId);
-        if (song) {
+        // Get metadata from saved metadata
+        const metadata = savedMetadata[songId];
+        if (metadata) {
+          // Create a full song object with the cached metadata
+          const song: Song = {
+            id: songId,
+            title: metadata.title || "Unknown Title",
+            artist: metadata.artist || "Unknown Artist",
+            album: metadata.album || "Unknown Album",
+            coverArt: metadata.coverArt,
+            duration: metadata.duration || 0,
+          };
           cachedSongs.push(song);
         }
       }
@@ -509,6 +522,7 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => ({
         artist: song.artist,
         album: song.album,
         coverArt: song.coverArt,
+        duration: song.duration,
       };
 
       // Save updated metadata
