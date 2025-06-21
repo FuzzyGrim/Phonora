@@ -79,8 +79,20 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
    */
   setUserSettings: async (settings: UserSettings) => {
     try {
+      const currentSettings = get().userSettings;
       await AsyncStorage.setItem("user_settings", JSON.stringify(settings));
       set({ userSettings: settings });
+
+      // If offline mode setting changed, trigger network state update
+      if (currentSettings.offlineMode !== settings.offlineMode) {
+        const { networkState, updateNetworkState, loadCachedSongs } = get();
+        updateNetworkState(networkState);
+
+        // If we're switching TO offline mode, also load cached songs
+        if (settings.offlineMode) {
+          await loadCachedSongs();
+        }
+      }
     } catch (error) {
       console.error("Error saving user settings:", error);
     }

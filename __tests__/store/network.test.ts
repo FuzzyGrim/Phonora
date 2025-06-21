@@ -261,45 +261,71 @@ describe("Network Slice", () => {
 
   describe("loadCachedSongs", () => {
     let mockIsFileCached: jest.Mock;
+    let mockLoadSongMetadata: jest.Mock;
 
     beforeEach(() => {
       mockIsFileCached = jest.fn();
+      mockLoadSongMetadata = jest.fn();
 
       mockGet.mockReturnValue({
-        songs: mockSongs,
         isFileCached: mockIsFileCached,
+        loadSongMetadata: mockLoadSongMetadata,
       });
     });
 
     it("should load cached songs successfully", async () => {
+      const mockMetadata = {
+        song1: {
+          title: "Test Song 1",
+          artist: "Test Artist",
+          album: "Test Album",
+          duration: 180,
+        },
+        song2: {
+          title: "Test Song 2",
+          artist: "Test Artist",
+          album: "Test Album",
+          duration: 200,
+        },
+      };
+
+      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
       mockIsFileCached
         .mockResolvedValueOnce(true) // song1 is cached
         .mockResolvedValueOnce(false); // song2 is not cached
 
       await networkSlice.loadCachedSongs();
 
+      expect(mockLoadSongMetadata).toHaveBeenCalled();
       expect(mockIsFileCached).toHaveBeenCalledWith("song1", "mp3");
       expect(mockIsFileCached).toHaveBeenCalledWith("song2", "mp3");
       expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: [mockSongs[0]], // Only song1 should be in cached songs
+        cachedSongs: [
+          {
+            id: "song1",
+            title: "Test Song 1",
+            artist: "Test Artist",
+            album: "Test Album",
+            duration: 180,
+            coverArt: undefined,
+          },
+        ], // Only song1 should be in cached songs
       });
     });
 
-    it("should handle empty songs list", async () => {
-      mockGet.mockReturnValue({
-        songs: [],
-        isFileCached: mockIsFileCached,
-      });
+    it("should handle empty metadata", async () => {
+      mockLoadSongMetadata.mockResolvedValue({});
 
       await networkSlice.loadCachedSongs();
 
+      expect(mockLoadSongMetadata).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
       expect(mockIsFileCached).not.toHaveBeenCalled();
     });
 
     it("should handle errors when checking cached files", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      mockIsFileCached.mockRejectedValue(new Error("File system error"));
+      mockLoadSongMetadata.mockRejectedValue(new Error("Metadata error"));
 
       await networkSlice.loadCachedSongs();
 
@@ -312,6 +338,22 @@ describe("Network Slice", () => {
 
     it("should log the number of cached songs found", async () => {
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const mockMetadata = {
+        song1: {
+          title: "Test Song 1",
+          artist: "Test Artist",
+          album: "Test Album",
+          duration: 180,
+        },
+        song2: {
+          title: "Test Song 2",
+          artist: "Test Artist",
+          album: "Test Album",
+          duration: 200,
+        },
+      };
+
+      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
       mockIsFileCached.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
 
       await networkSlice.loadCachedSongs();

@@ -135,13 +135,25 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
    */
   loadCachedSongs: async () => {
     try {
-      const { songs, isFileCached } = get();
+      const { loadSongMetadata, isFileCached } = get();
       const cachedSongs: Song[] = [];
 
-      // Check which songs from our library are cached
-      for (const song of songs) {
-        const isSongCached = await isFileCached(song.id, "mp3");
-        if (isSongCached) {
+      // Load song metadata from cache
+      const songMetadata = await loadSongMetadata();
+
+      // Check which songs have both metadata and cached audio files
+      for (const [songId, metadata] of Object.entries(songMetadata)) {
+        const isSongCached = await isFileCached(songId, "mp3");
+        if (isSongCached && metadata) {
+          // Create a song object from the cached metadata
+          const song: Song = {
+            id: songId,
+            title: (metadata as any).title || "Unknown Title",
+            artist: (metadata as any).artist || "Unknown Artist",
+            album: (metadata as any).album || "Unknown Album",
+            duration: (metadata as any).duration || 0,
+            coverArt: (metadata as any).coverArt,
+          };
           cachedSongs.push(song);
         }
       }
