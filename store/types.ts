@@ -86,6 +86,8 @@ export interface PlaybackState {
   isPlaying: boolean;
   currentSong: Song | null;
   player: ReturnType<typeof createAudioPlayer> | null;
+  position: number; // current position in seconds
+  duration: number; // total duration in seconds
 }
 
 /**

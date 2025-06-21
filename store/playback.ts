@@ -52,6 +52,8 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     isPlaying: false,
     currentSong: null,
     player: null,
+    position: 0,
+    duration: 0,
   },
   currentSongsList: null,
   isRepeat: false,
@@ -111,12 +113,12 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         const audioCachePromise = isCached
           ? Promise.resolve(getCachedFilePath(song.id, "mp3"))
           : downloadSong(song).catch((err: any) => {
-              console.warn(
-                `Background audio caching failed for ${song.title}:`,
-                err,
-              );
-              return getStreamUrl(song.id);
-            });
+            console.warn(
+              `Background audio caching failed for ${song.title}:`,
+              err,
+            );
+            return getStreamUrl(song.id);
+          });
 
         // If the song has cover art, cache it also
         let imageCachePromise = Promise.resolve();
@@ -126,7 +128,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
             // Download image in the background, don't await
             // Image download will skip cache management and use the song's cleanup
             imageCachePromise = downloadImage(song.coverArt, song.title)
-              .then(() => {})
+              .then(() => { })
               .catch((err: any) =>
                 console.warn(
                   `Background image caching failed for ${song.coverArt}:`,
@@ -144,7 +146,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           console.log(`Playing cached song: ${song.title}`);
 
           // Let image download in background
-          imageCachePromise.catch(() => {});
+          imageCachePromise.catch(() => { });
         } else {
           // Use streaming URL while waiting for download
           const streamUrl = getStreamUrl(song.id);
@@ -152,7 +154,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
           // Let both downloads happen in background
           Promise.all([audioCachePromise, imageCachePromise])
-            .catch(() => {}) // Ignore errors to prevent app crashes
+            .catch(() => { }) // Ignore errors to prevent app crashes
             .finally(() =>
               console.log(
                 `Background caching operations completed for ${song.title}`,
@@ -175,6 +177,15 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
       // Set up a listener for playback status updates
       const handlePlaybackStatusUpdate = (status: AudioStatus) => {
+        // Update position and duration in the store
+        set((state: any) => ({
+          playback: {
+            ...state.playback,
+            position: status.currentTime || 0,
+            duration: status.duration || song.duration || 0,
+          },
+        }));
+
         // When the song reaches the end (status.didJustFinish will be true)
         if (status.didJustFinish) {
           console.log(`Song finished: ${song.title}`);
@@ -204,6 +215,8 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           isPlaying: true,
           currentSong: song,
           player,
+          position: 0,
+          duration: song.duration || 0,
         },
       });
     } catch (error) {
@@ -281,6 +294,8 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           isPlaying: false,
           currentSong: null,
           player: null,
+          position: 0,
+          duration: 0,
         },
       });
     }

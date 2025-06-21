@@ -88,6 +88,8 @@ describe("Playback Slice", () => {
         isPlaying: false,
         currentSong: null,
         player: null,
+        position: 0,
+        duration: 0,
       });
       expect(playbackSlice.currentSongsList).toBeNull();
       expect(playbackSlice.isRepeat).toBe(false);
@@ -346,6 +348,8 @@ describe("Playback Slice", () => {
           isPlaying: false,
           currentSong: null,
           player: null,
+          position: 0,
+          duration: 0,
         },
       });
     });

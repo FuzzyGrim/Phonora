@@ -12,6 +12,10 @@ export default function MiniPlayer() {
   const router = useRouter();
   const [coverArtUrl, setCoverArtUrl] = useState<string>("");
 
+  // Calculate progress percentage
+  const progressPercentage =
+    playback.duration > 0 ? (playback.position / playback.duration) * 100 : 0;
+
   // Load cover art URL when current song changes
   useEffect(() => {
     if (playback.currentSong?.coverArt) {
@@ -44,45 +48,68 @@ export default function MiniPlayer() {
       style={[styles.container, { backgroundColor: colors.surface }]}
       onPress={openFullPlayer}
     >
-      <View style={styles.songInfo}>
-        {coverArtUrl ? (
-          <Image source={{ uri: coverArtUrl }} style={styles.coverArt} />
-        ) : (
+      {/* Progress bar at the top */}
+      <View style={styles.progressBarContainer}>
+        <View
+          style={[
+            styles.progressBarBackground,
+            { backgroundColor: colors.border },
+          ]}
+        >
           <View
             style={[
-              styles.placeholderCover,
-              { backgroundColor: colors.border },
+              styles.progressBarFill,
+              {
+                backgroundColor: colors.primary,
+                width: `${progressPercentage}%`,
+              },
             ]}
-          >
-            <Music2 size={16} color={colors.textSecondary} />
-          </View>
-        )}
-        <View style={styles.textContainer}>
-          <Text
-            style={[styles.title, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {playback.currentSong.title}
-          </Text>
-          <Text
-            style={[styles.artist, { color: colors.textSecondary }]}
-            numberOfLines={1}
-          >
-            {playback.currentSong.artist}
-          </Text>
+          />
         </View>
       </View>
-      <View style={styles.controls}>
-        <TouchableOpacity onPress={handlePlayPause} style={styles.button}>
-          {playback.isPlaying ? (
-            <Pause size={24} color={colors.primary} />
+
+      {/* Main content */}
+      <View style={styles.mainContent}>
+        <View style={styles.songInfo}>
+          {coverArtUrl ? (
+            <Image source={{ uri: coverArtUrl }} style={styles.coverArt} />
           ) : (
-            <Play size={24} color={colors.primary} />
+            <View
+              style={[
+                styles.placeholderCover,
+                { backgroundColor: colors.border },
+              ]}
+            >
+              <Music2 size={16} color={colors.textSecondary} />
+            </View>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSkipNext} style={styles.button}>
-          <SkipForward size={24} color={colors.primary} />
-        </TouchableOpacity>
+          <View style={styles.textContainer}>
+            <Text
+              style={[styles.title, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {playback.currentSong.title}
+            </Text>
+            <Text
+              style={[styles.artist, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {playback.currentSong.artist}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.controls}>
+          <TouchableOpacity onPress={handlePlayPause} style={styles.button}>
+            {playback.isPlaying ? (
+              <Pause size={24} color={colors.primary} />
+            ) : (
+              <Play size={24} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSkipNext} style={styles.button}>
+            <SkipForward size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -97,12 +124,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   container: {
-    alignItems: "center",
     borderTopWidth: 1,
-    flexDirection: "row",
-    height: 60,
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
+    flexDirection: "column",
   },
   controls: {
     alignItems: "center",
@@ -114,6 +137,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
     width: 40,
   },
+  mainContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    height: 60,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
   placeholderCover: {
     alignItems: "center",
     borderRadius: 4,
@@ -121,6 +151,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
     width: 40,
+  },
+  progressBarBackground: {
+    height: "100%",
+    width: "100%",
+  },
+  progressBarContainer: {
+    height: 2,
+    width: "100%",
+  },
+  progressBarFill: {
+    borderRadius: 1,
+    height: "100%",
   },
   songInfo: {
     alignItems: "center",
