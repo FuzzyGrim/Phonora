@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     margin: 20,
     marginBottom: 40,
-    padding: 20,
+    padding: 15,
   },
   clearCacheButtonText: {
     fontFamily: "Inter-SemiBold",
