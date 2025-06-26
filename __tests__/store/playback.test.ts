@@ -215,7 +215,7 @@ describe("Playback Slice", () => {
     it("should handle song finish event and auto-skip", async () => {
       mockGet.mockReturnValue({
         ...mockGet(),
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         skipToNext: jest.fn(),
       });
 
@@ -273,13 +273,10 @@ describe("Playback Slice", () => {
         playSong: mockPlaySong,
       });
 
-      await playbackSlice.playSongFromSource(mockSong, "library", mockSongs);
+      await playbackSlice.playSongFromSource(mockSong, mockSongs);
 
       expect(mockSet).toHaveBeenCalledWith({
-        currentSongsList: {
-          source: "library",
-          songs: mockSongs,
-        },
+        currentSongsList: mockSongs,
       });
       expect(mockPlaySong).toHaveBeenCalledWith(mockSong);
     });
@@ -380,7 +377,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -399,7 +396,7 @@ describe("Playback Slice", () => {
           currentSong: mockSong,
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "one",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -418,7 +415,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "all",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -440,7 +437,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "off",
         isShuffle: true,
         playSong: mockPlaySong,
@@ -460,7 +457,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -481,7 +478,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[1],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "off",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -500,7 +497,7 @@ describe("Playback Slice", () => {
           currentSong: mockSongs[0],
           player: mockPlayer,
         },
-        currentSongsList: { source: "library", songs: mockSongs },
+        currentSongsList: mockSongs,
         repeatMode: "all",
         isShuffle: false,
         playSong: mockPlaySong,
@@ -519,6 +516,8 @@ describe("Playback Slice", () => {
           isPlaying: true,
           currentSong: mockSong,
           player: mockPlayer,
+          position: 30, // Add position to the mock state
+          duration: 180, // Add duration to the mock state
         },
       });
 
@@ -535,6 +534,8 @@ describe("Playback Slice", () => {
           isPlaying: true,
           currentSong: mockSong,
           player: mockPlayer,
+          position: 30, // Add position to the mock state
+          duration: 180, // Add duration to the mock state
         },
       });
 
@@ -544,13 +545,13 @@ describe("Playback Slice", () => {
     });
 
     it("should not seek before beginning", async () => {
-      mockPlayer.currentTime = 5; // 5 seconds
-
       mockGet.mockReturnValue({
         playback: {
           isPlaying: true,
           currentSong: mockSong,
           player: mockPlayer,
+          position: 5, // Use position instead of player.currentTime
+          duration: 180,
         },
       });
 

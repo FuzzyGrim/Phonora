@@ -467,7 +467,6 @@ describe("PlayerScreen Integration Tests", () => {
 
       expect(mockPlaySongFromSource).toHaveBeenCalledWith(
         mockSongs[1],
-        "library",
         mockSongs,
       );
     });
@@ -480,11 +479,7 @@ describe("PlayerScreen Integration Tests", () => {
 
       mockUseMusicPlayerStore.mockReturnValue({
         ...defaultMockStore,
-        currentSongsList: {
-          id: "playlist1",
-          name: "My Playlist",
-          songs: playlistSongs,
-        },
+        currentSongsList: playlistSongs,
       });
 
       render(

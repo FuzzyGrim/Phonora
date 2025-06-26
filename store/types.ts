@@ -135,13 +135,7 @@ export type PlaylistSource =
  */
 export type RepeatMode = "off" | "one" | "all";
 
-/**
- * Current song list information
- */
-export interface CurrentSongsList {
-  source: PlaylistSource;
-  songs: Song[];
-}
+
 
 // Default settings when no user preferences are saved
 export const DEFAULT_USER_SETTINGS: UserSettings = {

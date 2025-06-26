@@ -206,7 +206,7 @@ export default function AlbumDetailsScreen() {
       })) || [];
 
     // Play the song with album as the source
-    playSongFromSource(songObject, "album", allSongs);
+    playSongFromSource(songObject, allSongs);
   };
 
   const navigateToArtist = () => {

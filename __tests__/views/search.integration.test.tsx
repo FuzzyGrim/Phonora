@@ -384,7 +384,6 @@ describe("SearchScreen Integration Tests", () => {
 
         expect(defaultMockStore.playSongFromSource).toHaveBeenCalledWith(
           mockSongs[0],
-          "search",
           mockSongs,
         );
       });

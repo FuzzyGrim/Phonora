@@ -238,7 +238,7 @@ export default function ArtistDetailsScreen() {
   const playAllAlbums = () => {
     if (allSongs.length > 0) {
       // Play the first song with artist as the source
-      playSongFromSource(allSongs[0], "artist", allSongs);
+      playSongFromSource(allSongs[0], allSongs);
     }
   };
 

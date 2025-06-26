@@ -159,7 +159,7 @@ export default function PlaylistDetailsScreen() {
       })) || [];
 
     // Play the song with playlist as the source
-    playSongFromSource(songObject, "playlist", allSongs);
+    playSongFromSource(songObject, allSongs);
   };
 
   const playAllSongs = () => {

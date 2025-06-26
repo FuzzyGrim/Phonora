@@ -92,11 +92,11 @@ export default function SearchScreen() {
       // Get all songs from search results
       const searchSongs = searchResults?.songs || [];
       if (searchSongs.length > 0) {
-        playSongFromSource(song, "search", searchSongs);
+        playSongFromSource(song, searchSongs);
       } else {
         // If no search songs, use global songs as fallback
         const { songs } = useMusicPlayerStore.getState();
-        playSongFromSource(song, "library", songs);
+        playSongFromSource(song, songs);
       }
     }
   };

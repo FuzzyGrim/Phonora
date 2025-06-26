@@ -6,9 +6,7 @@ import { createAudioPlayer, setAudioModeAsync, AudioStatus } from "expo-audio";
 import {
   Song,
   PlaybackState,
-  CurrentSongsList,
   RepeatMode,
-  PlaylistSource,
 } from "./types";
 
 /**
@@ -17,7 +15,7 @@ import {
 export interface PlaybackSlice {
   // State
   playback: PlaybackState;
-  currentSongsList: CurrentSongsList | null;
+  currentSongsList: Song[] | null;
   isRepeat: boolean;
   isShuffle: boolean;
   repeatMode: RepeatMode;
@@ -26,7 +24,6 @@ export interface PlaybackSlice {
   playSong: (song: Song) => Promise<void>;
   playSongFromSource: (
     song: Song,
-    source: PlaylistSource,
     sourceSongs: Song[],
   ) => Promise<void>;
   pauseSong: () => Promise<void>;
@@ -113,12 +110,12 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         const audioCachePromise = isCached
           ? Promise.resolve(getCachedFilePath(song.id, "mp3"))
           : downloadSong(song).catch((err: any) => {
-              console.warn(
-                `Background audio caching failed for ${song.title}:`,
-                err,
-              );
-              return getStreamUrl(song.id);
-            });
+            console.warn(
+              `Background audio caching failed for ${song.title}:`,
+              err,
+            );
+            return getStreamUrl(song.id);
+          });
 
         // If the song has cover art, cache it also
         let imageCachePromise = Promise.resolve();
@@ -128,7 +125,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
             // Download image in the background, don't await
             // Image download will skip cache management and use the song's cleanup
             imageCachePromise = downloadImage(song.coverArt, song.title)
-              .then(() => {})
+              .then(() => { })
               .catch((err: any) =>
                 console.warn(
                   `Background image caching failed for ${song.coverArt}:`,
@@ -146,7 +143,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           console.log(`Playing cached song: ${song.title}`);
 
           // Let image download in background
-          imageCachePromise.catch(() => {});
+          imageCachePromise.catch(() => { });
         } else {
           // Use streaming URL while waiting for download
           const streamUrl = getStreamUrl(song.id);
@@ -154,7 +151,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
           // Let both downloads happen in background
           Promise.all([audioCachePromise, imageCachePromise])
-            .catch(() => {}) // Ignore errors to prevent app crashes
+            .catch(() => { }) // Ignore errors to prevent app crashes
             .finally(() =>
               console.log(
                 `Background caching operations completed for ${song.title}`,
@@ -177,14 +174,24 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
       // Set up a listener for playback status updates
       const handlePlaybackStatusUpdate = (status: AudioStatus) => {
-        // Update position and duration in the store
-        set((state: any) => ({
-          playback: {
-            ...state.playback,
-            position: status.currentTime || 0,
-            duration: status.duration || song.duration || 0,
-          },
-        }));
+        // Only update state if there are meaningful changes to prevent unnecessary re-renders
+        const currentState = get().playback;
+        const newPosition = status.currentTime || 0;
+        const newDuration = status.duration || song.duration || 0;
+
+        // Only update if position changed by more than 0.5 seconds or if duration changed
+        if (
+          Math.abs(currentState.position - newPosition) > 0.5 ||
+          currentState.duration !== newDuration
+        ) {
+          set((state: any) => ({
+            playback: {
+              ...state.playback,
+              position: newPosition,
+              duration: newDuration,
+            },
+          }));
+        }
 
         // When the song reaches the end (status.didJustFinish will be true)
         if (status.didJustFinish) {
@@ -194,7 +201,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           console.log("Song finished - currentSongsList state:", {
             hasCurrentSong: !!get().playback.currentSong,
             hasPlaylist: !!currentSongsList,
-            playlistLength: currentSongsList?.songs?.length || 0,
+            playlistLength: currentSongsList?.length || 0,
             repeatMode,
             isShuffle,
           });
@@ -238,15 +245,11 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    */
   playSongFromSource: async (
     song: Song,
-    source: PlaylistSource,
     sourceSongs: Song[],
   ) => {
     // Set the current playlist source
     set({
-      currentSongsList: {
-        source,
-        songs: sourceSongs,
-      },
+      currentSongsList: sourceSongs,
     });
 
     // Then play the song using the regular playSong method
@@ -305,19 +308,31 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Seek to a specific position in the current song
    */
   seekToPosition: async (positionSeconds: number) => {
-    const { player } = get().playback;
+    const { player, duration } = get().playback;
     if (!player) {
       return;
     }
 
     try {
+      // Use the stored duration from state instead of accessing player properties directly
+      const songDuration = duration || player.duration || positionSeconds;
+
       // Ensure we don't seek beyond the song duration
       const clampedPosition = Math.min(
         Math.max(positionSeconds, 0),
-        player.duration || positionSeconds,
+        songDuration,
       );
 
+      // Perform the seek operation
       await player.seekTo(clampedPosition);
+
+      // Immediately update the position in state for responsive UI
+      set((state: any) => ({
+        playback: {
+          ...state.playback,
+          position: clampedPosition,
+        },
+      }));
     } catch (error) {
       console.error("Error seeking to position:", error);
     }
@@ -331,7 +346,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     console.log("skipToNext called", {
       hasSong: !!playback.currentSong,
       hasPlaylist: !!currentSongsList,
-      playlistLength: currentSongsList?.songs?.length || 0,
+      playlistLength: currentSongsList?.length || 0,
       globalSongsLength: songs?.length || 0,
       repeatMode,
       isShuffle,
@@ -351,7 +366,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     }
 
     // Get the songs list to work with
-    const songsToUse = currentSongsList?.songs || songs;
+    const songsToUse = currentSongsList || songs;
     if (!songsToUse || songsToUse.length === 0) {
       console.log("skipToNext returning: No songs available");
       return;
@@ -420,7 +435,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     }
 
     // Get the songs list to work with
-    const songsToUse = currentSongsList?.songs || songs;
+    const songsToUse = currentSongsList || songs;
     if (!songsToUse || songsToUse.length === 0) {
       return;
     }
@@ -465,31 +480,47 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Seek forward 10 seconds in the current song
    */
   seekForward: async () => {
-    const { player } = get().playback;
+    const { player, position, duration } = get().playback;
     if (!player) return;
 
-    // Get current time in seconds and add 10 seconds
-    const currentTime = player.currentTime;
-    const duration = player.duration;
+    try {
+      // Use the stored position from state instead of accessing player properties directly
+      const currentTime = position || 0;
+      const songDuration = duration || 0;
 
-    // Seek forward 10 seconds, but don't go beyond the end
-    const newPosition = Math.min(currentTime + 10, duration || 0);
-    await player.seekTo(newPosition);
+      // Seek forward 10 seconds, but don't go beyond the end
+      const newPosition = Math.min(currentTime + 10, songDuration);
+
+      // Don't await the seekTo to prevent UI freezing
+      player.seekTo(newPosition).catch((error: any) => {
+        console.warn("Seek forward failed:", error);
+      });
+    } catch (error) {
+      console.error("Error seeking forward:", error);
+    }
   },
 
   /**
    * Seek backward 10 seconds in the current song
    */
   seekBackward: async () => {
-    const { player } = get().playback;
+    const { player, position } = get().playback;
     if (!player) return;
 
-    // Get current time in seconds and subtract 10 seconds
-    const currentTime = player.currentTime;
+    try {
+      // Use the stored position from state instead of accessing player properties directly
+      const currentTime = position || 0;
 
-    // Seek backward 10 seconds, but don't go below 0
-    const newPosition = Math.max(currentTime - 10, 0);
-    await player.seekTo(newPosition);
+      // Seek backward 10 seconds, but don't go below 0
+      const newPosition = Math.max(currentTime - 10, 0);
+
+      // Don't await the seekTo to prevent UI freezing
+      player.seekTo(newPosition).catch((error: any) => {
+        console.warn("Seek backward failed:", error);
+      });
+    } catch (error) {
+      console.error("Error seeking backward:", error);
+    }
   },
 
   /**

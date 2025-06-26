@@ -72,7 +72,7 @@ export default function PlayerScreen() {
   }, [repeatMode]);
 
   // Get the appropriate list of songs to display
-  const songsToDisplay = currentSongsList?.songs || songs;
+  const songsToDisplay = currentSongsList || songs;
 
   // Define currentSong at component level
   const currentSong = playback.currentSong || {
@@ -84,14 +84,20 @@ export default function PlayerScreen() {
     coverArt: "",
   };
 
-  // Animated values for the playing indicator
-  const bar1Height = useRef(new Animated.Value(3)).current;
-  const bar2Height = useRef(new Animated.Value(8)).current;
-  const bar3Height = useRef(new Animated.Value(5)).current;
+  // Animated values for the playing indicator - using transform for native driver compatibility
+  const bar1Scale = useRef(new Animated.Value(0.2)).current;
+  const bar2Scale = useRef(new Animated.Value(0.5)).current;
+  const bar3Scale = useRef(new Animated.Value(0.3)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Animation sequence for the playing indicator
   useEffect(() => {
-    // Create reusable animation sequence
+    // Stop any existing animation
+    if (animationRef.current) {
+      animationRef.current.stop();
+    }
+
+    // Create reusable animation sequence with native driver
     const createBarAnimation = (
       value: Animated.Value,
       toValue: number,
@@ -101,8 +107,8 @@ export default function PlayerScreen() {
         Animated.delay(delay),
         Animated.timing(value, {
           toValue,
-          duration: 300,
-          useNativeDriver: false,
+          duration: 400,
+          useNativeDriver: true,
         }),
       ]);
     };
@@ -112,16 +118,16 @@ export default function PlayerScreen() {
       return Animated.loop(
         Animated.parallel([
           Animated.sequence([
-            createBarAnimation(bar1Height, 12, 0),
-            createBarAnimation(bar1Height, 3, 0),
+            createBarAnimation(bar1Scale, 1, 0),
+            createBarAnimation(bar1Scale, 0.2, 0),
           ]),
           Animated.sequence([
-            createBarAnimation(bar2Height, 4, 200),
-            createBarAnimation(bar2Height, 10, 0),
+            createBarAnimation(bar2Scale, 0.3, 150),
+            createBarAnimation(bar2Scale, 0.8, 0),
           ]),
           Animated.sequence([
-            createBarAnimation(bar3Height, 13, 400),
-            createBarAnimation(bar3Height, 5, 0),
+            createBarAnimation(bar3Scale, 1, 300),
+            createBarAnimation(bar3Scale, 0.3, 0),
           ]),
         ]),
       );
@@ -129,27 +135,31 @@ export default function PlayerScreen() {
 
     // Initialize animation
     const animation = createFullAnimation();
+    animationRef.current = animation;
 
     // Start or pause the animation based on playback state
     if (playback.isPlaying) {
       animation.start();
     } else {
-      // For paused state, don't reset the values, just stop the animation
-      animation.stop();
+      // For paused state, reset to static values
+      bar1Scale.setValue(0.2);
+      bar2Scale.setValue(0.5);
+      bar3Scale.setValue(0.3);
     }
 
     // Cleanup function to stop animation when unmounting
     return () => {
-      animation.stop();
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
     };
-  }, [playback.isPlaying, currentSong.id, bar1Height, bar2Height, bar3Height]);
+  }, [playback.isPlaying, currentSong.id, bar1Scale, bar2Scale, bar3Scale]);
 
-  // Update position for progress bar
+  // Update position for progress bar with optimized timing
   useEffect(() => {
     // Immediately get current position when component mounts
     const getInitialPosition = () => {
       if (playback.player && !isSliderBeingDragged && !seekingRef.current) {
-        // Access the currentTime property directly
         setPosition(playback.player.currentTime);
       }
     };
@@ -160,12 +170,12 @@ export default function PlayerScreen() {
     let interval: ReturnType<typeof setInterval> | null = null;
 
     if (playback.isPlaying && playback.player) {
+      // Use 250ms interval for smoother updates with less overhead
       interval = setInterval(() => {
         if (playback.player && !isSliderBeingDragged && !seekingRef.current) {
-          // Access the currentTime property directly
           setPosition(playback.player.currentTime);
         }
-      }, 1000);
+      }, 250);
     }
 
     return () => {
@@ -246,7 +256,7 @@ export default function PlayerScreen() {
 
   const handleSongPress = (song: Song) => {
     // Use the songsToDisplay as the playlist source
-    playSongFromSource(song, "library", songsToDisplay);
+    playSongFromSource(song, songsToDisplay);
   };
 
   const handleSliderChange = (value: number) => {
@@ -345,7 +355,7 @@ export default function PlayerScreen() {
                   styles.playingBar,
                   {
                     backgroundColor: colors.primary,
-                    height: bar1Height,
+                    transform: [{ scaleY: bar1Scale }],
                   },
                 ]}
               />
@@ -354,7 +364,7 @@ export default function PlayerScreen() {
                   styles.playingBar,
                   {
                     backgroundColor: colors.primary,
-                    height: bar2Height,
+                    transform: [{ scaleY: bar2Scale }],
                   },
                 ]}
               />
@@ -363,7 +373,7 @@ export default function PlayerScreen() {
                   styles.playingBar,
                   {
                     backgroundColor: colors.primary,
-                    height: bar3Height,
+                    transform: [{ scaleY: bar3Scale }],
                   },
                 ]}
               />
@@ -589,7 +599,9 @@ const styles = StyleSheet.create({
   },
   playingBar: {
     borderRadius: 2,
+    height: 16,
     marginHorizontal: 1,
+    transformOrigin: "bottom",
     width: 4,
   },
   progressBar: {

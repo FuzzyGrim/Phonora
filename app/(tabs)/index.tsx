@@ -177,7 +177,7 @@ export default function HomeScreen() {
       }
     } else {
       // Use playSongFromSource instead to set up the playlist properly
-      await playSongFromSource(song, "library", availableSongs);
+      await playSongFromSource(song, availableSongs);
     }
   };
 

@@ -474,7 +474,6 @@ describe("Detail Screens Integration Tests", () => {
         fireEvent.press(getByText("Song 1"));
         expect(defaultMockStore.playSongFromSource).toHaveBeenCalledWith(
           mockPlaylistDetails.songs[0],
-          "playlist",
           mockPlaylistDetails.songs,
         );
       });
@@ -562,7 +561,6 @@ describe("Detail Screens Integration Tests", () => {
         fireEvent.press(getByText("Rock Song 1"));
         expect(defaultMockStore.playSongFromSource).toHaveBeenCalledWith(
           mockGenreSongs[0],
-          "genre",
           mockGenreSongs,
         );
       });

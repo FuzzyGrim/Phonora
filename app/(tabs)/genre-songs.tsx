@@ -145,7 +145,7 @@ export default function GenreSongsScreen() {
     }));
 
     // Play the song with genre as the source
-    playSongFromSource(songObject, "genre", allSongs);
+    playSongFromSource(songObject, allSongs);
   };
 
   const playAllSongs = () => {
