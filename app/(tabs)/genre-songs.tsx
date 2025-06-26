@@ -27,7 +27,8 @@ interface GenreSong {
 
 export default function GenreSongsScreen() {
   const { colors } = useTheme();
-  const { playSongFromSource, getCoverArtUrl } = useMusicPlayerStore();
+  const { playSongFromSource, getCoverArtUrl, isOfflineMode } =
+    useMusicPlayerStore();
   const { config, generateAuthParams } = useMusicPlayerStore(
     useShallow((state) => ({
       config: state.config,
@@ -44,48 +45,67 @@ export default function GenreSongsScreen() {
   const [songs, setSongs] = useState<GenreSong[]>([]);
 
   useEffect(() => {
-    // Fetch songs by genre
+    // Fetch songs by genre from server or cache based on offline mode
     const fetchGenreSongs = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        if (!config || !config.serverUrl) {
-          setError("Server configuration is missing");
-          setIsLoading(false);
-          return;
-        }
+        if (isOfflineMode) {
+          // Use cached data when offline
+          const { dbManager } = await import("@/store/database");
+          const cachedSongs = await dbManager.getCachedSongsByGenre(genreName);
 
-        // Generate authentication parameters
-        const authParams = generateAuthParams();
-
-        // Make API request to get songs by genre
-        const response = await fetch(
-          `${config.serverUrl}/rest/getSongsByGenre.view?genre=${encodeURIComponent(genreName)}&count=500&${authParams.toString()}`,
-        );
-        const data = await response.json();
-
-        if (
-          data["subsonic-response"].status === "ok" &&
-          data["subsonic-response"].songsByGenre
-        ) {
-          const songsData = data["subsonic-response"].songsByGenre.song || [];
-
-          // Format and set songs
-          const formattedSongs = songsData.map((song: any) => ({
+          const formattedSongs = cachedSongs.map((song) => ({
             id: song.id,
             title: song.title,
             artist: song.artist,
             album: song.album,
             duration: song.duration,
-            track: song.track,
             coverArt: song.coverArt,
           }));
 
           setSongs(formattedSongs);
         } else {
-          throw new Error(
-            data["subsonic-response"].error?.message || "Failed to fetch songs",
+          // Use server data when online
+          if (!config || !config.serverUrl) {
+            setError("Server configuration is missing");
+            setIsLoading(false);
+            return;
+          }
+
+          // Generate authentication parameters
+          const authParams = generateAuthParams();
+
+          // Make API request to get songs by genre
+          const response = await fetch(
+            `${config.serverUrl}/rest/getSongsByGenre.view?genre=${encodeURIComponent(genreName)}&count=500&${authParams.toString()}`,
           );
+          const data = await response.json();
+
+          if (
+            data["subsonic-response"].status === "ok" &&
+            data["subsonic-response"].songsByGenre
+          ) {
+            const songsData = data["subsonic-response"].songsByGenre.song || [];
+
+            // Format and set songs
+            const formattedSongs = songsData.map((song: any) => ({
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration: song.duration,
+              track: song.track,
+              coverArt: song.coverArt,
+            }));
+
+            setSongs(formattedSongs);
+          } else {
+            throw new Error(
+              data["subsonic-response"].error?.message ||
+                "Failed to fetch songs",
+            );
+          }
         }
       } catch (error) {
         console.error(`Error fetching songs for genre ${genreName}:`, error);
@@ -96,7 +116,7 @@ export default function GenreSongsScreen() {
     };
 
     fetchGenreSongs();
-  }, [config, generateAuthParams, genreId, genreName]);
+  }, [config, generateAuthParams, genreId, genreName, isOfflineMode]);
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);

@@ -45,12 +45,15 @@ interface ArtistDetails {
 export default function ArtistDetailsScreen() {
   const { colors } = useTheme();
   const { playSongFromSource, getCoverArtUrl } = useMusicPlayerStore();
-  const { config, generateAuthParams } = useMusicPlayerStore(
-    useShallow((state) => ({
-      config: state.config,
-      generateAuthParams: state.generateAuthParams,
-    })),
-  );
+  const { config, generateAuthParams, isOfflineMode, getArtistDetailsOffline } =
+    useMusicPlayerStore(
+      useShallow((state) => ({
+        config: state.config,
+        generateAuthParams: state.generateAuthParams,
+        isOfflineMode: state.isOfflineMode,
+        getArtistDetailsOffline: state.getArtistDetailsOffline,
+      })),
+    );
 
   const params = useLocalSearchParams();
   const artistId = params.id as string;
@@ -72,6 +75,55 @@ export default function ArtistDetailsScreen() {
 
   useEffect(() => {
     const fetchArtistDetails = async () => {
+      if (isOfflineMode) {
+        // Use cached data when offline
+        try {
+          const cachedArtistData = await getArtistDetailsOffline(artistId);
+
+          if (cachedArtistData) {
+            const formattedAlbums: ArtistAlbum[] = cachedArtistData.albums.map(
+              (album: any) => ({
+                id: album.id,
+                name: album.name,
+                coverArt: album.coverArt,
+                songCount: album.songCount,
+                year: album.year,
+              }),
+            );
+
+            setArtist({
+              id: cachedArtistData.id,
+              name: cachedArtistData.name,
+              albumCount: cachedArtistData.albumCount,
+              albums: formattedAlbums,
+              coverArt: cachedArtistData.coverArt,
+            });
+
+            // Use the songs from cached data
+            const formattedSongs: Song[] = cachedArtistData.songs.map(
+              (song: any) => ({
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                album: song.album,
+                duration: song.duration,
+                coverArt: song.coverArt,
+              }),
+            );
+
+            setAllSongs(formattedSongs);
+          } else {
+            setError("Artist not found in cache");
+          }
+        } catch (error) {
+          console.error("Error fetching cached artist details:", error);
+          setError("Failed to load cached artist details");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (!config || !config.serverUrl) {
         setError("Server configuration is missing");
         setIsLoading(false);
@@ -168,7 +220,13 @@ export default function ArtistDetailsScreen() {
     };
 
     fetchArtistDetails();
-  }, [artistId, config, generateAuthParams]);
+  }, [
+    artistId,
+    config,
+    generateAuthParams,
+    isOfflineMode,
+    getArtistDetailsOffline,
+  ]);
 
   const navigateToAlbum = (albumId: string) => {
     router.push({

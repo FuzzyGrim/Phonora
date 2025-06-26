@@ -483,13 +483,59 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
     },
 
     /**
-     * Save song metadata to database
+     * Save song metadata to database with enhanced metadata collection and normalization
      */
     saveSongMetadata: async (song: Song, fileSize: number = 0) => {
       try {
-        await dbManager.saveSongMetadata(song, fileSize);
+        // Generate consistent IDs
+        const artistId = `artist_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
+        const albumId = `album_${song.album.replace(/\s+/g, '_').toLowerCase()}_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
+
+        // Try to save artist metadata if not already saved
+        try {
+          const existingArtist = await dbManager.getCachedArtistByName(song.artist);
+          if (!existingArtist) {
+            // Create a basic artist record from song data
+            await dbManager.saveArtistMetadata({
+              id: artistId,
+              name: song.artist,
+              albumCount: 1, // We'll update this as we cache more songs
+              coverArt: song.coverArt,
+            });
+          }
+        } catch (error) {
+          console.warn("Could not save artist metadata:", error);
+        }
+
+        // Try to save album metadata if not already saved
+        try {
+          const existingAlbum = await dbManager.getCachedAlbumByName(song.album, song.artist);
+          if (!existingAlbum) {
+            // Create a basic album record from song data
+            await dbManager.saveAlbumMetadata({
+              id: albumId,
+              name: song.album,
+              artist: song.artist,
+              artistId: artistId,
+              songCount: 1, // We'll update this as we cache more songs
+              coverArt: song.coverArt,
+            });
+          }
+        } catch (error) {
+          console.warn("Could not save album metadata:", error);
+        }
+
+        // Save song metadata with foreign keys
+        await dbManager.saveSongMetadata(song, fileSize, {
+          artistId: artistId,
+          albumId: albumId,
+          genre: undefined, // We could extract this from song metadata if available
+        });
+
+        console.log(`Saved song metadata for: ${song.title} by ${song.artist}`);
       } catch (error) {
         console.error("Error saving song metadata:", error);
+        throw error;
       }
     },
 

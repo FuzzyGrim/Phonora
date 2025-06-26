@@ -21,18 +21,26 @@ export default function AlbumsScreen() {
   const [albums, setAlbums] = useState<Album[]>([]);
 
   // Access config from the store using shallow equality
-  const { fetchAlbums } = useMusicPlayerStore(
-    useShallow((state) => ({
-      fetchAlbums: state.fetchAlbums,
-    })),
-  );
+  const { fetchAlbums, fetchAlbumsOffline, isOfflineMode } =
+    useMusicPlayerStore(
+      useShallow((state) => ({
+        fetchAlbums: state.fetchAlbums,
+        fetchAlbumsOffline: state.fetchAlbumsOffline,
+        isOfflineMode: state.isOfflineMode,
+      })),
+    );
 
   useEffect(() => {
-    // Fetch albums from the server
+    // Fetch albums from the server or cache based on offline mode
     const loadAlbums = async () => {
       setIsLoading(true);
       try {
-        const albumsData = await fetchAlbums();
+        let albumsData: Album[];
+        if (isOfflineMode) {
+          albumsData = await fetchAlbumsOffline();
+        } else {
+          albumsData = await fetchAlbums();
+        }
         setAlbums(albumsData);
       } catch (error) {
         console.error("Error fetching albums:", error);
@@ -42,7 +50,7 @@ export default function AlbumsScreen() {
     };
 
     loadAlbums();
-  }, [fetchAlbums]);
+  }, [fetchAlbums, fetchAlbumsOffline, isOfflineMode]);
 
   const renderAlbumItem = ({ item }: { item: Album }) => (
     <TouchableOpacity

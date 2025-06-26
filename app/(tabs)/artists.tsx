@@ -19,18 +19,26 @@ export default function ArtistsScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const { fetchArtists } = useMusicPlayerStore(
-    useShallow((state) => ({
-      fetchArtists: state.fetchArtists,
-    })),
-  );
+  const { fetchArtists, fetchArtistsOffline, isOfflineMode } =
+    useMusicPlayerStore(
+      useShallow((state) => ({
+        fetchArtists: state.fetchArtists,
+        fetchArtistsOffline: state.fetchArtistsOffline,
+        isOfflineMode: state.isOfflineMode,
+      })),
+    );
 
   useEffect(() => {
-    // Fetch artists from the server
+    // Fetch artists from the server or cache based on offline mode
     const loadArtists = async () => {
       setIsLoading(true);
       try {
-        const artistsData = await fetchArtists();
+        let artistsData: Artist[];
+        if (isOfflineMode) {
+          artistsData = await fetchArtistsOffline();
+        } else {
+          artistsData = await fetchArtists();
+        }
         setArtists(artistsData);
       } catch (error) {
         console.error("Error fetching artists:", error);
@@ -40,7 +48,7 @@ export default function ArtistsScreen() {
     };
 
     loadArtists();
-  }, [fetchArtists]);
+  }, [fetchArtists, fetchArtistsOffline, isOfflineMode]);
 
   const renderArtistItem = ({ item }: { item: Artist }) => (
     <TouchableOpacity

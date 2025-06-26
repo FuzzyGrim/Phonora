@@ -3,6 +3,7 @@
  */
 
 import { Song, SearchResults, Album, Artist, Genre, Playlist } from "./types";
+import { dbManager } from "./database";
 
 /**
  * API slice for the store
@@ -26,6 +27,12 @@ export interface ApiSlice {
   fetchGenres: () => Promise<Genre[]>;
   fetchPlaylists: () => Promise<Playlist[]>;
   search: (query: string) => Promise<void>;
+  searchOffline: (query: string) => Promise<void>;
+  fetchAlbumsOffline: () => Promise<Album[]>;
+  fetchArtistsOffline: () => Promise<Artist[]>;
+  fetchGenresOffline: () => Promise<Genre[]>;
+  getArtistDetailsOffline: (artistId: string) => Promise<any>;
+  getAlbumDetailsOffline: (albumId: string) => Promise<any>;
   getCoverArtUrl: (id: string) => string;
   getCoverArtUrlCached: (id: string) => Promise<string>;
   getStreamUrl: (id: string) => string;
@@ -222,11 +229,17 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
   },
 
   /**
-   * Search for songs, albums, and artists
+   * Search for songs, albums, and artists (offline-aware)
    */
   search: async (query: string) => {
-    const { config, generateAuthParams } = get();
-    if (!config || !query.trim()) {
+    const { config, generateAuthParams, isOfflineMode, searchOffline } = get();
+
+    // Use offline search if in offline mode or no config
+    if (isOfflineMode || !config) {
+      return searchOffline(query);
+    }
+
+    if (!query.trim()) {
       set({ searchResults: null, isSearching: false });
       return;
     }
@@ -288,6 +301,69 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         error: error instanceof Error ? error.message : "Search failed",
         isSearching: false,
       });
+    }
+  },
+
+  /**
+   * Search in cached data for offline use
+   */
+  searchOffline: async (query: string) => {
+    if (!query.trim()) {
+      set({ searchResults: null, isSearching: false });
+      return;
+    }
+
+    set({ isSearching: true, error: null });
+
+    try {
+      const results = await dbManager.searchCached(query);
+      set({
+        searchResults: results,
+        isSearching: false,
+      });
+    } catch (error) {
+      console.error("Offline search error:", error);
+      set({
+        error: error instanceof Error ? error.message : "Offline search failed",
+        isSearching: false,
+        searchResults: { artists: [], albums: [], songs: [] },
+      });
+    }
+  },
+
+  /**
+   * Fetch cached albums for offline use
+   */
+  fetchAlbumsOffline: async (): Promise<Album[]> => {
+    try {
+      return await dbManager.getAllCachedAlbums();
+    } catch (error) {
+      console.error("Error fetching cached albums:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetch cached artists for offline use
+   */
+  fetchArtistsOffline: async (): Promise<Artist[]> => {
+    try {
+      return await dbManager.getAllCachedArtists();
+    } catch (error) {
+      console.error("Error fetching cached artists:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetch cached genres for offline use
+   */
+  fetchGenresOffline: async (): Promise<Genre[]> => {
+    try {
+      return await dbManager.getAllCachedGenres();
+    } catch (error) {
+      console.error("Error fetching cached genres:", error);
+      return [];
     }
   },
 
@@ -431,6 +507,30 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
       throw new Error(
         data["subsonic-response"].error?.message || "Failed to fetch playlists",
       );
+    }
+  },
+
+  /**
+   * Get artist details from cache for offline use
+   */
+  getArtistDetailsOffline: async (artistId: string) => {
+    try {
+      return await dbManager.getCachedArtistDetails(artistId);
+    } catch (error) {
+      console.error("Error fetching cached artist details:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get album details from cache for offline use
+   */
+  getAlbumDetailsOffline: async (albumId: string) => {
+    try {
+      return await dbManager.getCachedAlbumDetails(albumId);
+    } catch (error) {
+      console.error("Error fetching cached album details:", error);
+      return null;
     }
   },
 });

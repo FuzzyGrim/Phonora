@@ -142,16 +142,6 @@ export default function CachedSongsScreen() {
               imageSize: matchingImage?.size,
               imagePath: matchingImage?.path,
             });
-          } else {
-            // Handle orphaned audio files (no matching song in store or metadata)
-            songGroups.push({
-              songId: audioFile.id,
-              title: "Unknown Song",
-              artist: "Unknown Artist",
-              album: "Unknown Album",
-              songSize: audioFile.size,
-              songPath: audioFile.path,
-            });
           }
         }
 

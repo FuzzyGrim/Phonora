@@ -21,19 +21,27 @@ export default function GenresScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Access fetchGenres from the store using shallow equality
-  const { fetchGenres } = useMusicPlayerStore(
-    useShallow((state) => ({
-      fetchGenres: state.fetchGenres,
-    })),
-  );
+  const { fetchGenres, fetchGenresOffline, isOfflineMode } =
+    useMusicPlayerStore(
+      useShallow((state) => ({
+        fetchGenres: state.fetchGenres,
+        fetchGenresOffline: state.fetchGenresOffline,
+        isOfflineMode: state.isOfflineMode,
+      })),
+    );
 
   useEffect(() => {
-    // Fetch genres from the server
+    // Fetch genres from the server or cache based on offline mode
     const loadGenres = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const genresData = await fetchGenres();
+        let genresData: Genre[];
+        if (isOfflineMode) {
+          genresData = await fetchGenresOffline();
+        } else {
+          genresData = await fetchGenres();
+        }
         setGenres(genresData);
       } catch (error) {
         setError(
@@ -46,7 +54,7 @@ export default function GenresScreen() {
     };
 
     loadGenres();
-  }, [fetchGenres]);
+  }, [fetchGenres, fetchGenresOffline, isOfflineMode]);
 
   const renderGenreItem = ({ item }: { item: Genre }) => (
     <TouchableOpacity

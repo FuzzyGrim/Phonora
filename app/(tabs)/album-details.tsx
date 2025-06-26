@@ -43,12 +43,15 @@ export default function AlbumDetailsScreen() {
   const { playSongFromSource, getCoverArtUrl } = useMusicPlayerStore();
 
   // Access config and auth functions from the store
-  const { config, generateAuthParams } = useMusicPlayerStore(
-    useShallow((state) => ({
-      config: state.config,
-      generateAuthParams: state.generateAuthParams,
-    })),
-  );
+  const { config, generateAuthParams, isOfflineMode, getAlbumDetailsOffline } =
+    useMusicPlayerStore(
+      useShallow((state) => ({
+        config: state.config,
+        generateAuthParams: state.generateAuthParams,
+        isOfflineMode: state.isOfflineMode,
+        getAlbumDetailsOffline: state.getAlbumDetailsOffline,
+      })),
+    );
 
   const params = useLocalSearchParams();
   const albumId = params.id as string;
@@ -68,6 +71,47 @@ export default function AlbumDetailsScreen() {
 
   useEffect(() => {
     const fetchAlbumDetails = async () => {
+      if (isOfflineMode) {
+        // Use cached data when offline
+        try {
+          const cachedAlbumData = await getAlbumDetailsOffline(albumId);
+
+          if (cachedAlbumData) {
+            const formattedSongs: AlbumSong[] = cachedAlbumData.songs.map(
+              (song: any) => ({
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                duration: song.duration,
+                track: song.track,
+                coverArt: song.coverArt,
+              }),
+            );
+
+            setAlbum({
+              id: cachedAlbumData.id,
+              name: cachedAlbumData.name,
+              artist: cachedAlbumData.artist,
+              artistId: cachedAlbumData.artistId || "",
+              coverArt: cachedAlbumData.coverArt,
+              year: cachedAlbumData.year,
+              genre: cachedAlbumData.genre,
+              songCount: cachedAlbumData.songCount,
+              duration: cachedAlbumData.duration,
+              songs: formattedSongs,
+            });
+          } else {
+            setError("Album not found in cache");
+          }
+        } catch (error) {
+          console.error("Error fetching cached album details:", error);
+          setError("Failed to load cached album details");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (!config || !config.serverUrl) {
         setError("Server configuration is missing");
         setIsLoading(false);
@@ -126,7 +170,13 @@ export default function AlbumDetailsScreen() {
     };
 
     fetchAlbumDetails();
-  }, [albumId, config, generateAuthParams]);
+  }, [
+    albumId,
+    config,
+    generateAuthParams,
+    isOfflineMode,
+    getAlbumDetailsOffline,
+  ]);
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
