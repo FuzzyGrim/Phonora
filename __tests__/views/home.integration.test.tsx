@@ -18,6 +18,13 @@ jest.mock("expo-router", () => ({
   },
 }));
 
+// Mock database
+jest.mock("@/store/database", () => ({
+  dbManager: {
+    getAllCachedSongs: jest.fn(() => Promise.resolve([])),
+  },
+}));
+
 // Mock the store
 jest.mock("../../store", () => ({
   useMusicPlayerStore: jest.fn(),
@@ -52,9 +59,13 @@ describe("HomeScreen Integration Tests", () => {
   ];
 
   const defaultMockStore = {
+    songs: mockSongs, // Include songs in the default mock
     isLoading: false,
+    isLoadingMore: false,
     error: null,
     fetchSongs: jest.fn(),
+    fetchMoreSongs: jest.fn(),
+    clearSongs: jest.fn(),
     getCoverArtUrl: jest.fn(
       (coverArt: string) => `https://example.com/${coverArt}`,
     ),
@@ -69,7 +80,6 @@ describe("HomeScreen Integration Tests", () => {
     playSongFromSource: jest.fn(),
     isOfflineMode: false,
     networkState: { isConnected: true },
-    getAvailableSongs: jest.fn(() => Promise.resolve(mockSongs)),
   };
 
   beforeEach(() => {
@@ -114,10 +124,14 @@ describe("HomeScreen Integration Tests", () => {
     });
 
     it("should show empty state message for offline mode when no cached songs", () => {
+      // Mock dbManager to return empty array for cached songs
+      const mockDbManager = require("@/store/database");
+      mockDbManager.dbManager.getAllCachedSongs = jest.fn(() => Promise.resolve([]));
+
       mockStore.mockReturnValue({
         ...defaultMockStore,
         isOfflineMode: true,
-        getAvailableSongs: jest.fn(() => Promise.resolve([])),
+        songs: [], // No online songs either
       });
 
       const { getByText } = render(
@@ -137,6 +151,13 @@ describe("HomeScreen Integration Tests", () => {
 
   describe("Song List", () => {
     it("should render list of songs", async () => {
+      // Ensure songs are available in the store for online mode
+      mockStore.mockReturnValue({
+        ...defaultMockStore,
+        songs: mockSongs, // Make sure songs are available for online mode
+        isOfflineMode: false,
+      });
+
       const { getByText } = render(
         <TestWrapper>
           <HomeScreen />
@@ -156,6 +177,13 @@ describe("HomeScreen Integration Tests", () => {
     });
 
     it("should show duration in correct format", async () => {
+      // Ensure songs are available in the store for online mode
+      mockStore.mockReturnValue({
+        ...defaultMockStore,
+        songs: mockSongs, // Make sure songs are available for online mode
+        isOfflineMode: false,
+      });
+
       const { getByText } = render(
         <TestWrapper>
           <HomeScreen />

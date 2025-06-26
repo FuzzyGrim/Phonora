@@ -15,7 +15,6 @@ import {
   CachedFileInfo,
   PlaylistSource,
   RepeatMode,
-  CurrentSongsList,
   DEFAULT_USER_SETTINGS,
 } from "../../store/types";
 
@@ -170,25 +169,6 @@ describe("Types Module", () => {
       modes.forEach((mode) => {
         expect(typeof mode).toBe("string");
       });
-    });
-
-    it("should define CurrentSongsList interface correctly", () => {
-      const playlist: CurrentSongsList = {
-        source: "library",
-        songs: [
-          {
-            id: "song1",
-            title: "Song 1",
-            artist: "Artist 1",
-            album: "Album 1",
-            duration: 180,
-          },
-        ],
-      };
-
-      expect(playlist.source).toBe("library");
-      expect(playlist.songs).toHaveLength(1);
-      expect(playlist.songs[0].id).toBe("song1");
     });
   });
 

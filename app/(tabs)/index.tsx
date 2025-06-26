@@ -1,6 +1,7 @@
 import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store";
 import { Song } from "@/store/types";
+import { dbManager } from "@/store/database";
 import { Music2, Pause, Play, WifiOff } from "lucide-react-native";
 import React from "react";
 import {
@@ -37,15 +38,27 @@ export default function HomeScreen() {
     playSongFromSource,
     isOfflineMode,
     networkState,
-    getAvailableSongs,
   } = useMusicPlayerStore();
   const [refreshing, setRefreshing] = React.useState(false);
   const [availableSongs, setAvailableSongs] = React.useState<Song[]>([]);
 
+  // Get songs available based on current mode (online/offline)
+  const getAvailableSongs = React.useCallback(async (): Promise<Song[]> => {
+    if (isOfflineMode) {
+      try {
+        return await dbManager.getAllCachedSongs();
+      } catch (error) {
+        console.error("Error loading cached songs:", error);
+        return [];
+      }
+    }
+    return songs;
+  }, [isOfflineMode, songs]);
+
   // Memoize the song loading function to avoid unnecessary re-renders
   const loadAvailableSongs = React.useCallback(async () => {
-    const songs = await getAvailableSongs();
-    setAvailableSongs(songs);
+    const availableSongs = await getAvailableSongs();
+    setAvailableSongs(availableSongs);
   }, [getAvailableSongs]);
 
   // Load available songs based on current mode (online/offline)

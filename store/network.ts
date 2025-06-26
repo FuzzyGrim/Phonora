@@ -13,7 +13,6 @@ export interface NetworkSlice {
   // Actions
   initializeNetworkMonitoring: () => void;
   updateNetworkState: (networkState: NetworkState) => void;
-  getAvailableSongs: () => Promise<Song[]>;
 }
 
 /**
@@ -99,21 +98,5 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
       networkState,
       isOfflineMode: shouldBeOffline,
     });
-  },
-
-  /**
-   * Get songs available based on current mode (online/offline)
-   */
-  getAvailableSongs: async () => {
-    const { isOfflineMode, songs } = get();
-    if (isOfflineMode) {
-      try {
-        return await dbManager.getAllCachedSongs();
-      } catch (error) {
-        console.error("Error loading cached songs:", error);
-        return [];
-      }
-    }
-    return songs;
   },
 });
