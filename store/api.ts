@@ -135,6 +135,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             album: song.album,
             duration: song.duration,
             coverArt: song.coverArt,
+            genre: song.genre,
           }),
         );
 
@@ -195,6 +196,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             album: song.album,
             duration: song.duration,
             coverArt: song.coverArt,
+            genre: song.genre,
           }),
         );
 
@@ -283,6 +285,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
             album: song.album,
             duration: song.duration,
             coverArt: song.coverArt,
+            genre: song.genre,
           }))
           : [];
 

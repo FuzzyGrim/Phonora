@@ -97,6 +97,7 @@ export default function GenreSongsScreen() {
               duration: song.duration,
               track: song.track,
               coverArt: song.coverArt,
+              genre: genreName, // We know the genre from the API endpoint
             }));
 
             setSongs(formattedSongs);

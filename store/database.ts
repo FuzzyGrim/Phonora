@@ -80,6 +80,15 @@ class DatabaseManager {
         );
       `);
 
+            // Create genres table (referenced by songs table)
+            await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS genres (
+          name TEXT PRIMARY KEY,
+          songCount INTEGER DEFAULT 0,
+          cachedAt INTEGER NOT NULL
+        );
+      `);
+
             // Create songs table with normalized structure
             await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS songs (
@@ -93,16 +102,8 @@ class DatabaseManager {
           albumId TEXT NOT NULL,
           genre TEXT,
           FOREIGN KEY (artistId) REFERENCES artists(id),
-          FOREIGN KEY (albumId) REFERENCES albums(id)
-        );
-      `);
-
-            // Create genres table for offline browsing
-            await this.db.execAsync(`
-        CREATE TABLE IF NOT EXISTS genres (
-          name TEXT PRIMARY KEY,
-          songCount INTEGER DEFAULT 0,
-          cachedAt INTEGER NOT NULL
+          FOREIGN KEY (albumId) REFERENCES albums(id),
+          FOREIGN KEY (genre) REFERENCES genres(name)
         );
       `);
 

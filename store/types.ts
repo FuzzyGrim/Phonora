@@ -14,6 +14,7 @@ export interface Song {
   album: string;
   duration: number;
   coverArt?: string;
+  genre?: string;
 }
 
 /**

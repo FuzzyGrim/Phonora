@@ -525,11 +525,35 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
           console.warn("Could not save album metadata:", error);
         }
 
+        // Try to save genre metadata if not already saved and genre is provided
+        let genreToSave: string | undefined = undefined;
+        if (song.genre) {
+          try {
+            // Check if genre already exists in database
+            const existingGenres = await dbManager.getAllCachedGenres();
+            const existingGenre = existingGenres.find(g => g.name === song.genre);
+
+            if (!existingGenre) {
+              // Create a basic genre record
+              await dbManager.saveGenreMetadata({
+                id: song.genre,
+                name: song.genre,
+                songCount: 1, // We'll update this as we cache more songs
+              });
+            }
+            genreToSave = song.genre;
+          } catch (error) {
+            console.warn("Could not save genre metadata:", error);
+            // If we can't save the genre, don't set it for the song to avoid foreign key constraint violation
+            genreToSave = undefined;
+          }
+        }
+
         // Save song metadata with foreign keys
         await dbManager.saveSongMetadata(song, fileSize, {
           artistId: artistId,
           albumId: albumId,
-          genre: undefined, // We could extract this from song metadata if available
+          genre: genreToSave,
         });
 
         console.log(`Saved song metadata for: ${song.title} by ${song.artist}`);
