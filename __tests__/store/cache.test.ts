@@ -9,7 +9,23 @@ import { Song, CachedFileInfo } from "../../store/types";
 // Mock FileSystem
 jest.mock("expo-file-system");
 
+// Mock database
+jest.mock("../../store/database", () => ({
+  dbManager: {
+    init: jest.fn().mockResolvedValue(undefined),
+    getAllCachedSongs: jest.fn(),
+    saveSongMetadata: jest.fn().mockResolvedValue(undefined),
+    removeSongMetadata: jest.fn().mockResolvedValue(undefined),
+    clearAllCacheMetadata: jest.fn().mockResolvedValue(undefined),
+    getSongsForCleanup: jest.fn().mockResolvedValue([]),
+  },
+}));
+
 const mockFileSystem = FileSystem as jest.Mocked<typeof FileSystem>;
+
+// Import the mocked database manager
+import { dbManager } from "../../store/database";
+const mockDbManager = dbManager as jest.Mocked<typeof dbManager>;
 
 describe("Cache Slice", () => {
   let cacheSlice: any;
@@ -38,10 +54,17 @@ describe("Cache Slice", () => {
     // Reset all mocks
     jest.clearAllMocks();
 
+    // Reset database mocks
+    mockDbManager.getAllCachedSongs.mockResolvedValue([]);
+    mockDbManager.saveSongMetadata.mockResolvedValue(undefined);
+    mockDbManager.removeSongMetadata.mockResolvedValue(undefined);
+    mockDbManager.clearAllCacheMetadata.mockResolvedValue(undefined);
+    mockDbManager.getSongsForCleanup.mockResolvedValue([]);
+
     // Setup default mock returns
     mockGet.mockReturnValue({
       userSettings: mockUserSettings,
-      getStreamUrl: jest.fn(() => "http://example.com/stream/song123"),
+      getDownloadUrl: jest.fn(() => "http://example.com/download/song123"),
       getCoverArtUrl: jest.fn(() => "http://example.com/cover/cover123"),
       getCachedFilePath: jest.fn(
         (fileId: string, extension: string) =>
@@ -50,7 +73,7 @@ describe("Cache Slice", () => {
       songs: [mockSong],
       cachedSongs: [],
       saveSongMetadata: jest.fn().mockResolvedValue(undefined),
-      loadSongMetadata: jest.fn().mockResolvedValue({}),
+      initializeDatabase: jest.fn().mockResolvedValue(undefined),
     });
   });
 
@@ -331,9 +354,9 @@ describe("Cache Slice", () => {
         getCachedFilePath: jest.fn(() => CACHE_DIRECTORY + "song123.mp3"),
         hasEnoughCacheSpace: jest.fn(),
         freeUpCacheSpace: jest.fn(),
-        getStreamUrl: jest.fn(() => "http://example.com/stream/song123"),
+        getDownloadUrl: jest.fn(() => "http://example.com/download/song123"),
         saveSongMetadata: jest.fn().mockResolvedValue(undefined),
-        loadSongMetadata: jest.fn().mockResolvedValue({}),
+        initializeDatabase: jest.fn().mockResolvedValue(undefined),
       });
     });
 
@@ -363,7 +386,7 @@ describe("Cache Slice", () => {
       const result = await cacheSlice.downloadSong(mockSong);
 
       expect(mockFileSystem.downloadAsync).toHaveBeenCalledWith(
-        "http://example.com/stream/song123",
+        "http://example.com/download/song123",
         CACHE_DIRECTORY + "song123.mp3",
       );
       expect(result).toBe(CACHE_DIRECTORY + "song123.mp3");
@@ -377,7 +400,7 @@ describe("Cache Slice", () => {
 
       const result = await cacheSlice.downloadSong(mockSong);
 
-      expect(result).toBe("http://example.com/stream/song123");
+      expect(result).toBe("http://example.com/download/song123");
     });
 
     it("should free up space if needed", async () => {
@@ -414,7 +437,7 @@ describe("Cache Slice", () => {
 
       const result = await cacheSlice.downloadSong(mockSong);
 
-      expect(result).toBe("http://example.com/stream/song123"); // Fallback to streaming
+      expect(result).toBe("http://example.com/download/song123"); // Fallback to streaming
       expect(consoleSpy).toHaveBeenCalledWith("Failed to download song:", 404);
       consoleSpy.mockRestore();
     });
@@ -479,103 +502,51 @@ describe("Cache Slice", () => {
       });
     });
 
-    it("should load cached songs from file system using saved metadata", async () => {
-      const mockCachedFiles: CachedFileInfo[] = [
+    it("should load cached songs from database", async () => {
+      const mockDbSongs = [
         {
-          filename: "song123.mp3",
-          path: "/cache/song123.mp3",
           id: "song123",
-          extension: "mp3",
-          size: 1024,
-          modTime: 0,
-        },
-        {
-          filename: "cover123.jpg",
-          path: "/cache/cover123.jpg",
-          id: "cover123",
-          extension: "jpg",
-          size: 512,
-          modTime: 0,
-        },
-      ];
-
-      const mockMetadata = {
-        song123: {
           title: "Test Song",
           artist: "Test Artist",
           album: "Test Album",
           duration: 180,
           coverArt: "cover123",
-        },
-      };
-
-      const mockGetCachedFiles = mockGet().getCachedFiles;
-      const mockLoadSongMetadata = mockGet().loadSongMetadata;
-      mockGetCachedFiles.mockResolvedValue(mockCachedFiles);
-      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
-
-      await cacheSlice.loadCachedSongs();
-
-      expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: [
-          {
-            id: "song123",
-            title: "Test Song",
-            artist: "Test Artist",
-            album: "Test Album",
-            duration: 180,
-            coverArt: "cover123",
-          },
-        ],
-      });
-    });
-
-    it("should handle empty cached files", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const mockGetCachedFiles = mockGet().getCachedFiles;
-      const mockLoadSongMetadata = mockGet().loadSongMetadata;
-      mockGetCachedFiles.mockResolvedValue([]);
-      mockLoadSongMetadata.mockResolvedValue({});
-
-      await cacheSlice.loadCachedSongs();
-
-      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
-      expect(consoleSpy).toHaveBeenCalledWith("Loaded 0 cached songs");
-      consoleSpy.mockRestore();
-    });
-
-    it("should handle cached files without metadata gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const mockCachedFiles: CachedFileInfo[] = [
-        {
-          filename: "song123.mp3",
-          path: "/cache/song123.mp3",
-          id: "song123",
-          extension: "mp3",
-          size: 1024,
-          modTime: 0,
+          fileSize: 1024,
+          cachedAt: new Date().toISOString(),
         },
       ];
 
-      const mockGetCachedFiles = mockGet().getCachedFiles;
-      const mockLoadSongMetadata = mockGet().loadSongMetadata;
-      mockGetCachedFiles.mockResolvedValue(mockCachedFiles);
-      mockLoadSongMetadata.mockResolvedValue({}); // No metadata saved
+      mockDbManager.getAllCachedSongs.mockResolvedValue(mockDbSongs);
 
       await cacheSlice.loadCachedSongs();
 
+      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith({
+        cachedSongs: mockDbSongs,
+      });
+    });
+
+    it("should handle empty cached songs from database", async () => {
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+
+      mockDbManager.getAllCachedSongs.mockResolvedValue([]);
+
+      await cacheSlice.loadCachedSongs();
+
+      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
-      expect(consoleSpy).toHaveBeenCalledWith("Loaded 0 cached songs");
+      expect(consoleSpy).toHaveBeenCalledWith("Loaded 0 cached songs from database");
       consoleSpy.mockRestore();
     });
 
-    it("should handle errors gracefully", async () => {
+    it("should handle database errors gracefully", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const mockGetCachedFiles = mockGet().getCachedFiles;
-      mockGetCachedFiles.mockRejectedValue(new Error("File system error"));
+
+      mockDbManager.getAllCachedSongs.mockRejectedValue(new Error("Database error"));
 
       await cacheSlice.loadCachedSongs();
 
+      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith(
         "Error loading cached songs:",
         expect.any(Error),

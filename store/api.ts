@@ -29,6 +29,7 @@ export interface ApiSlice {
   getCoverArtUrl: (id: string) => string;
   getCoverArtUrlCached: (id: string) => Promise<string>;
   getStreamUrl: (id: string) => string;
+  getDownloadUrl: (id: string) => string;
 }
 
 /**
@@ -88,6 +89,16 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
     if (!config) return "";
     const params = generateAuthParams();
     return `${config.serverUrl}/rest/stream.view?id=${id}&${params.toString()}`;
+  },
+
+  /**
+   * Generate URL for downloading audio files
+   */
+  getDownloadUrl: (id: string) => {
+    const { config, generateAuthParams } = get();
+    if (!config) return "";
+    const params = generateAuthParams();
+    return `${config.serverUrl}/rest/download.view?id=${id}&${params.toString()}`;
   },
 
   /**
@@ -198,7 +209,7 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
       } else {
         throw new Error(
           data["subsonic-response"].error?.message ||
-            "Failed to fetch more songs",
+          "Failed to fetch more songs",
         );
       }
     } catch (error) {
@@ -235,31 +246,31 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
         // Create empty arrays if any part of the response is missing
         const artists = searchData.artist
           ? searchData.artist.map((artist: any) => ({
-              id: artist.id,
-              name: artist.name,
-            }))
+            id: artist.id,
+            name: artist.name,
+          }))
           : [];
 
         const albums = searchData.album
           ? searchData.album.map((album: any) => ({
-              id: album.id,
-              name: album.name,
-              artist: album.artist,
-              artistId: album.artistId,
-              coverArt: album.coverArt,
-              songCount: album.songCount || 0,
-            }))
+            id: album.id,
+            name: album.name,
+            artist: album.artist,
+            artistId: album.artistId,
+            coverArt: album.coverArt,
+            songCount: album.songCount || 0,
+          }))
           : [];
 
         const songs = searchData.song
           ? searchData.song.map((song: any) => ({
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              album: song.album,
-              duration: song.duration,
-              coverArt: song.coverArt,
-            }))
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            duration: song.duration,
+            coverArt: song.coverArt,
+          }))
           : [];
 
         set({

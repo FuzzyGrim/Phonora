@@ -9,7 +9,17 @@ import { NetworkState, Song } from "../../store/types";
 // Mock NetInfo
 jest.mock("@react-native-community/netinfo");
 
+// Mock database manager
+jest.mock("../../store/database", () => ({
+  dbManager: {
+    getAllCachedSongs: jest.fn(),
+  },
+}));
+
 const mockNetInfo = NetInfo as jest.Mocked<typeof NetInfo>;
+
+// Get the mocked dbManager
+const { dbManager } = require("../../store/database");
 
 describe("Network Slice", () => {
   let networkSlice: any;
@@ -77,7 +87,7 @@ describe("Network Slice", () => {
       };
 
       mockNetInfo.fetch.mockResolvedValue(mockNetworkState as any);
-      mockNetInfo.addEventListener.mockReturnValue(() => {});
+      mockNetInfo.addEventListener.mockReturnValue(() => { });
 
       const mockUpdateNetworkState = jest.fn();
       mockGet.mockReturnValue({
@@ -260,72 +270,51 @@ describe("Network Slice", () => {
   });
 
   describe("loadCachedSongs", () => {
-    let mockIsFileCached: jest.Mock;
-    let mockLoadSongMetadata: jest.Mock;
-
     beforeEach(() => {
-      mockIsFileCached = jest.fn();
-      mockLoadSongMetadata = jest.fn();
-
-      mockGet.mockReturnValue({
-        isFileCached: mockIsFileCached,
-        loadSongMetadata: mockLoadSongMetadata,
-      });
+      // Clear all mocks before each test
+      jest.clearAllMocks();
     });
 
     it("should load cached songs successfully", async () => {
-      const mockMetadata = {
-        song1: {
+      const mockCachedSongs = [
+        {
+          id: "song1",
           title: "Test Song 1",
           artist: "Test Artist",
           album: "Test Album",
           duration: 180,
         },
-        song2: {
+        {
+          id: "song2",
           title: "Test Song 2",
           artist: "Test Artist",
           album: "Test Album",
           duration: 200,
         },
-      };
+      ];
 
-      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
-      mockIsFileCached
-        .mockResolvedValueOnce(true) // song1 is cached
-        .mockResolvedValueOnce(false); // song2 is not cached
+      dbManager.getAllCachedSongs.mockResolvedValue(mockCachedSongs);
 
       await networkSlice.loadCachedSongs();
 
-      expect(mockLoadSongMetadata).toHaveBeenCalled();
-      expect(mockIsFileCached).toHaveBeenCalledWith("song1", "mp3");
-      expect(mockIsFileCached).toHaveBeenCalledWith("song2", "mp3");
+      expect(dbManager.getAllCachedSongs).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: [
-          {
-            id: "song1",
-            title: "Test Song 1",
-            artist: "Test Artist",
-            album: "Test Album",
-            duration: 180,
-            coverArt: undefined,
-          },
-        ], // Only song1 should be in cached songs
+        cachedSongs: mockCachedSongs,
       });
     });
 
-    it("should handle empty metadata", async () => {
-      mockLoadSongMetadata.mockResolvedValue({});
+    it("should handle empty cached songs", async () => {
+      dbManager.getAllCachedSongs.mockResolvedValue([]);
 
       await networkSlice.loadCachedSongs();
 
-      expect(mockLoadSongMetadata).toHaveBeenCalled();
+      expect(dbManager.getAllCachedSongs).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
-      expect(mockIsFileCached).not.toHaveBeenCalled();
     });
 
-    it("should handle errors when checking cached files", async () => {
+    it("should handle errors when loading cached songs", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      mockLoadSongMetadata.mockRejectedValue(new Error("Metadata error"));
+      dbManager.getAllCachedSongs.mockRejectedValue(new Error("Database error"));
 
       await networkSlice.loadCachedSongs();
 
@@ -336,30 +325,31 @@ describe("Network Slice", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should log the number of cached songs found", async () => {
+    it("should log the number of cached songs loaded", async () => {
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const mockMetadata = {
-        song1: {
+      const mockCachedSongs = [
+        {
+          id: "song1",
           title: "Test Song 1",
           artist: "Test Artist",
           album: "Test Album",
           duration: 180,
         },
-        song2: {
+        {
+          id: "song2",
           title: "Test Song 2",
           artist: "Test Artist",
           album: "Test Album",
           duration: 200,
         },
-      };
+      ];
 
-      mockLoadSongMetadata.mockResolvedValue(mockMetadata);
-      mockIsFileCached.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+      dbManager.getAllCachedSongs.mockResolvedValue(mockCachedSongs);
 
       await networkSlice.loadCachedSongs();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Loaded 2 cached songs for offline use",
+        "Loaded 2 cached songs for offline use from database",
       );
       consoleSpy.mockRestore();
     });

@@ -1,5 +1,6 @@
 import NetInfo from "@react-native-community/netinfo";
 import { NetworkState, Song } from "./types";
+import { dbManager } from "./database";
 
 /**
  * Network slice interface for type safety
@@ -90,7 +91,7 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
       !currentNetworkState ||
       currentNetworkState.isConnected !== networkState.isConnected ||
       currentNetworkState.isInternetReachable !==
-        networkState.isInternetReachable ||
+      networkState.isInternetReachable ||
       currentNetworkState.type !== networkState.type ||
       currentOfflineMode !== shouldBeOffline;
 
@@ -135,31 +136,10 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
    */
   loadCachedSongs: async () => {
     try {
-      const { loadSongMetadata, isFileCached } = get();
-      const cachedSongs: Song[] = [];
-
-      // Load song metadata from cache
-      const songMetadata = await loadSongMetadata();
-
-      // Check which songs have both metadata and cached audio files
-      for (const [songId, metadata] of Object.entries(songMetadata)) {
-        const isSongCached = await isFileCached(songId, "mp3");
-        if (isSongCached && metadata) {
-          // Create a song object from the cached metadata
-          const song: Song = {
-            id: songId,
-            title: (metadata as any).title || "Unknown Title",
-            artist: (metadata as any).artist || "Unknown Artist",
-            album: (metadata as any).album || "Unknown Album",
-            duration: (metadata as any).duration || 0,
-            coverArt: (metadata as any).coverArt,
-          };
-          cachedSongs.push(song);
-        }
-      }
-
+      // Call the cache slice's loadCachedSongs method directly to avoid recursion
+      const cachedSongs = await dbManager.getAllCachedSongs();
       set({ cachedSongs });
-      console.log(`Loaded ${cachedSongs.length} cached songs for offline use`);
+      console.log(`Loaded ${cachedSongs.length} cached songs for offline use from database`);
     } catch (error) {
       console.error("Error loading cached songs:", error);
     }

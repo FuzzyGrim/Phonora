@@ -13,6 +13,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useMusicPlayerStore } from "@/store";
 import { Song } from "@/store/types";
 import * as FileSystem from "expo-file-system";
+import { dbManager } from "@/store/database";
 import { ChevronLeft, HardDrive, Music2 } from "lucide-react-native";
 import { router } from "expo-router";
 
@@ -34,7 +35,7 @@ interface CachedSongGroup {
 
 export default function CachedSongsScreen() {
   const { colors } = useTheme();
-  const { songs, clearCache, loadSongMetadata } = useMusicPlayerStore();
+  const { songs, clearCache, loadCachedSongs } = useMusicPlayerStore();
   const [isLoading, setIsLoading] = useState(true);
   // const [cachedFiles, setCachedFiles] = useState<CachedFileInfo[]>([]);
   const [cachedSongs, setCachedSongs] = useState<CachedSongGroup[]>([]);
@@ -103,8 +104,8 @@ export default function CachedSongsScreen() {
         const cachedFileDetails = await Promise.all(fileInfoPromises);
         setTotalCacheSize(totalSize);
 
-        // Load cached song metadata
-        const cachedMetadata = await loadSongMetadata();
+        // Load cached songs from database
+        const cachedSongsFromDb = await dbManager.getAllCachedSongs();
 
         // Group audio files with their cover images
         const audioFiles = cachedFileDetails.filter(
@@ -119,17 +120,9 @@ export default function CachedSongsScreen() {
           // First try to find song in current store
           let song = songs.find((s: Song) => s.id === audioFile.id);
 
-          // If not found in store, try cached metadata
-          if (!song && cachedMetadata[audioFile.id]) {
-            const metadata = cachedMetadata[audioFile.id];
-            song = {
-              id: audioFile.id,
-              title: metadata.title || "Unknown Song",
-              artist: metadata.artist || "Unknown Artist",
-              album: metadata.album || "Unknown Album",
-              duration: 0, // We don't store duration in metadata
-              coverArt: metadata.coverArt,
-            };
+          // If not found in store, try cached songs from database
+          if (!song) {
+            song = cachedSongsFromDb.find((s) => s.id === audioFile.id);
           }
 
           if (song) {
@@ -171,7 +164,7 @@ export default function CachedSongsScreen() {
     };
 
     fetchCachedFiles();
-  }, [songs, loadSongMetadata]);
+  }, [songs, loadCachedSongs]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
