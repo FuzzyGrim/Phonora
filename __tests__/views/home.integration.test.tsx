@@ -69,7 +69,7 @@ describe("HomeScreen Integration Tests", () => {
     playSongFromSource: jest.fn(),
     isOfflineMode: false,
     networkState: { isConnected: true },
-    getAvailableSongs: jest.fn(() => mockSongs),
+    getAvailableSongs: jest.fn(() => Promise.resolve(mockSongs)),
   };
 
   beforeEach(() => {
@@ -117,7 +117,7 @@ describe("HomeScreen Integration Tests", () => {
       mockStore.mockReturnValue({
         ...defaultMockStore,
         isOfflineMode: true,
-        getAvailableSongs: jest.fn(() => []),
+        getAvailableSongs: jest.fn(() => Promise.resolve([])),
       });
 
       const { getByText } = render(
@@ -136,14 +136,18 @@ describe("HomeScreen Integration Tests", () => {
   });
 
   describe("Song List", () => {
-    it("should render list of songs", () => {
+    it("should render list of songs", async () => {
       const { getByText } = render(
         <TestWrapper>
           <HomeScreen />
         </TestWrapper>,
       );
 
-      expect(getByText("Test Song 1")).toBeTruthy();
+      // Wait for async song loading
+      await waitFor(() => {
+        expect(getByText("Test Song 1")).toBeTruthy();
+      });
+
       expect(getByText("Test Artist 1")).toBeTruthy();
       expect(getByText("Test Album 1")).toBeTruthy();
       expect(getByText("Test Song 2")).toBeTruthy();
@@ -151,14 +155,17 @@ describe("HomeScreen Integration Tests", () => {
       expect(getByText("Test Album 2")).toBeTruthy();
     });
 
-    it("should show duration in correct format", () => {
+    it("should show duration in correct format", async () => {
       const { getByText } = render(
         <TestWrapper>
           <HomeScreen />
         </TestWrapper>,
       );
 
-      expect(getByText("3:00")).toBeTruthy(); // 180 seconds
+      // Wait for async song loading
+      await waitFor(() => {
+        expect(getByText("3:00")).toBeTruthy(); // 180 seconds
+      });
       expect(getByText("4:00")).toBeTruthy(); // 240 seconds
     });
   });

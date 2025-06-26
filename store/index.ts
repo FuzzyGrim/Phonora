@@ -62,9 +62,6 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
       // Initialize network monitoring
       get().initializeNetworkMonitoring();
 
-      // Load cached songs for offline mode
-      await get().loadCachedSongs();
-
       // If we have credentials, fetch songs automatically (only if online)
       if (get().isAuthenticated && !get().isOfflineMode) {
         get().fetchSongs();
@@ -85,13 +82,8 @@ export const useMusicPlayerStore = create<MusicPlayerState>((set, get) => ({
 
       // If offline mode setting changed, trigger network state update
       if (currentSettings.offlineMode !== settings.offlineMode) {
-        const { networkState, updateNetworkState, loadCachedSongs } = get();
+        const { networkState, updateNetworkState } = get();
         updateNetworkState(networkState);
-
-        // If we're switching TO offline mode, also load cached songs
-        if (settings.offlineMode) {
-          await loadCachedSongs();
-        }
       }
     } catch (error) {
       console.error("Error saving user settings:", error);

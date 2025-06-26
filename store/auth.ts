@@ -160,9 +160,6 @@ export const createAuthSlice = (set: any, get: any): AuthSlice => ({
         isSearching: false,
         searchResults: null,
 
-        // Cache state
-        cachedSongs: [],
-
         // Playback state
         playback: {
           isPlaying: false,

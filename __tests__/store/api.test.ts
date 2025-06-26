@@ -199,22 +199,6 @@ describe("API Slice", () => {
         isLoading: false,
       });
     });
-
-    it("should call loadCachedSongs after successful fetch", async () => {
-      const mockLoadCachedSongs = jest.fn();
-      mockGet.mockReturnValue({
-        ...mockGet(),
-        loadCachedSongs: mockLoadCachedSongs,
-      });
-
-      mockFetch.mockResolvedValue({
-        json: () => Promise.resolve(mockSongsResponse),
-      } as Response);
-
-      await apiSlice.fetchSongs();
-
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
-    });
   });
 
   describe("search", () => {

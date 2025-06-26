@@ -23,6 +23,7 @@ function formatDuration(seconds: number) {
 export default function HomeScreen() {
   const { colors } = useTheme();
   const {
+    songs,
     isLoading,
     isLoadingMore,
     error,
@@ -39,9 +40,18 @@ export default function HomeScreen() {
     getAvailableSongs,
   } = useMusicPlayerStore();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [availableSongs, setAvailableSongs] = React.useState<Song[]>([]);
 
-  // Get available songs based on current mode (online/offline)
-  const availableSongs = getAvailableSongs();
+  // Memoize the song loading function to avoid unnecessary re-renders
+  const loadAvailableSongs = React.useCallback(async () => {
+    const songs = await getAvailableSongs();
+    setAvailableSongs(songs);
+  }, [getAvailableSongs]);
+
+  // Load available songs based on current mode (online/offline)
+  React.useEffect(() => {
+    loadAvailableSongs();
+  }, [loadAvailableSongs, isOfflineMode, songs]);
 
   const onRefresh = React.useCallback(async () => {
     if (!isOfflineMode) {

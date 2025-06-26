@@ -35,7 +35,7 @@ interface CachedSongGroup {
 
 export default function CachedSongsScreen() {
   const { colors } = useTheme();
-  const { songs, clearCache, loadCachedSongs } = useMusicPlayerStore();
+  const { songs, clearCache } = useMusicPlayerStore();
   const [isLoading, setIsLoading] = useState(true);
   // const [cachedFiles, setCachedFiles] = useState<CachedFileInfo[]>([]);
   const [cachedSongs, setCachedSongs] = useState<CachedSongGroup[]>([]);
@@ -154,7 +154,7 @@ export default function CachedSongsScreen() {
     };
 
     fetchCachedFiles();
-  }, [songs, loadCachedSongs]);
+  }, [songs]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

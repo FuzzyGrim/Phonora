@@ -18,9 +18,6 @@ let recentlyDeletedFiles: Set<string> = new Set();
  * Cache slice interface
  */
 export interface CacheSlice {
-  // State
-  cachedSongs: Song[];
-
   // Actions
   clearCache: () => Promise<void>;
   isFileCached: (fileId: string, extension: string) => Promise<boolean>;
@@ -31,7 +28,6 @@ export interface CacheSlice {
   hasEnoughCacheSpace: (sizeInBytes: number) => Promise<boolean>;
   getCachedFiles: () => Promise<CachedFileInfo[]>;
   freeUpCacheSpace: (requiredSpace: number) => Promise<number>;
-  loadCachedSongs: () => Promise<void>;
   saveSongMetadata: (song: Song, fileSize?: number) => Promise<void>;
   initializeDatabase: () => Promise<void>;
 }
@@ -54,9 +50,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
   initDb();
 
   return {
-    // Initial state
-    cachedSongs: [],
-
     /**
      * Clear all cached files and data
      */
@@ -68,9 +61,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
           await FileSystem.deleteAsync(CACHE_DIRECTORY);
           console.log("Cache cleared successfully");
         }
-
-        // Clear cached songs list
-        set({ cachedSongs: [] });
 
         // Clear database metadata
         await dbManager.clearAllCacheMetadata();
@@ -466,19 +456,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
         }
       } else {
         return coverArt; // Caching disabled, return remote URL
-      }
-    },
-
-    /**
-     * Load cached songs from the database
-     */
-    loadCachedSongs: async () => {
-      try {
-        const cachedSongs = await dbManager.getAllCachedSongs();
-        set({ cachedSongs });
-        console.log(`Loaded ${cachedSongs.length} cached songs from database`);
-      } catch (error) {
-        console.error("Error loading cached songs:", error);
       }
     },
 

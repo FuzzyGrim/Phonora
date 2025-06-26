@@ -9,13 +9,11 @@ export interface NetworkSlice {
   // State
   networkState: NetworkState;
   isOfflineMode: boolean;
-  cachedSongs: Song[];
 
   // Actions
   initializeNetworkMonitoring: () => void;
   updateNetworkState: (networkState: NetworkState) => void;
-  loadCachedSongs: () => Promise<void>;
-  getAvailableSongs: () => Song[];
+  getAvailableSongs: () => Promise<Song[]>;
 }
 
 /**
@@ -29,7 +27,6 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
     type: null,
   },
   isOfflineMode: false,
-  cachedSongs: [],
 
   /**
    * Initialize network monitoring
@@ -73,8 +70,6 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
     const {
       userSettings,
       setUserSettings,
-      loadCachedSongs,
-      networkState: currentNetworkState,
       isOfflineMode: currentOfflineMode,
     } = get();
 
@@ -84,16 +79,6 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
 
     // Auto-enable offline mode when no internet connection
     const shouldBeOffline = userSettings.offlineMode || hasNoInternet;
-
-    // Check if there's actually a change in network state or offline mode
-    // Handle case where currentNetworkState might be undefined (e.g., in tests)
-    const hasNetworkStateChanged =
-      !currentNetworkState ||
-      currentNetworkState.isConnected !== networkState.isConnected ||
-      currentNetworkState.isInternetReachable !==
-      networkState.isInternetReachable ||
-      currentNetworkState.type !== networkState.type ||
-      currentOfflineMode !== shouldBeOffline;
 
     // If we're going offline due to network issues and offline mode isn't already enabled in settings,
     // automatically enable it in the user settings
@@ -114,42 +99,21 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
       networkState,
       isOfflineMode: shouldBeOffline,
     });
-
-    // If we just went offline, load cached songs
-    if (shouldBeOffline && !currentOfflineMode) {
-      loadCachedSongs();
-    }
-
-    // Only log when there's an actual change
-    if (hasNetworkStateChanged) {
-      console.log("Network state updated:", {
-        isConnected: networkState.isConnected,
-        isInternetReachable: networkState.isInternetReachable,
-        isOfflineMode: shouldBeOffline,
-        offlineModeInSettings: userSettings.offlineMode,
-      });
-    }
-  },
-
-  /**
-   * Load songs that are available in cache for offline use
-   */
-  loadCachedSongs: async () => {
-    try {
-      // Call the cache slice's loadCachedSongs method directly to avoid recursion
-      const cachedSongs = await dbManager.getAllCachedSongs();
-      set({ cachedSongs });
-      console.log(`Loaded ${cachedSongs.length} cached songs for offline use from database`);
-    } catch (error) {
-      console.error("Error loading cached songs:", error);
-    }
   },
 
   /**
    * Get songs available based on current mode (online/offline)
    */
-  getAvailableSongs: () => {
-    const { isOfflineMode, songs, cachedSongs } = get();
-    return isOfflineMode ? cachedSongs : songs;
+  getAvailableSongs: async () => {
+    const { isOfflineMode, songs } = get();
+    if (isOfflineMode) {
+      try {
+        return await dbManager.getAllCachedSongs();
+      } catch (error) {
+        console.error("Error loading cached songs:", error);
+        return [];
+      }
+    }
+    return songs;
   },
 });

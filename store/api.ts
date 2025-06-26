@@ -154,9 +154,6 @@ export const createApiSlice = (set: any, get: any): ApiSlice => ({
           fetchedSongIds: newFetchedSongIds,
           isLoading: false,
         });
-
-        // Update cached songs list after fetching new songs
-        get().loadCachedSongs();
       } else {
         throw new Error(
           data["subsonic-response"].error?.message || "Failed to fetch songs",

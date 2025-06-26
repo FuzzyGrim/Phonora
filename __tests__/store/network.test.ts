@@ -61,7 +61,6 @@ describe("Network Slice", () => {
       userSettings: mockUserSettings,
       songs: mockSongs,
       setUserSettings: jest.fn(),
-      loadCachedSongs: jest.fn(),
       isFileCached: jest.fn(),
     });
   });
@@ -74,7 +73,6 @@ describe("Network Slice", () => {
         type: null,
       });
       expect(networkSlice.isOfflineMode).toBe(false);
-      expect(networkSlice.cachedSongs).toEqual([]);
     });
   });
 
@@ -195,7 +193,6 @@ describe("Network Slice", () => {
         ...mockUserSettings,
         offlineMode: true,
       });
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
     });
 
     it("should enable offline mode when internet is not reachable", () => {
@@ -215,7 +212,6 @@ describe("Network Slice", () => {
         ...mockUserSettings,
         offlineMode: true,
       });
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
     });
 
     it("should respect user offline mode setting when connected", () => {
@@ -241,169 +237,78 @@ describe("Network Slice", () => {
         networkState,
         isOfflineMode: true,
       });
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
-    });
-
-    it("should log network state changes", () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      const networkState: NetworkState = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: "wifi",
-      };
-
-      networkSlice.updateNetworkState(networkState);
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Network state updated:",
-        expect.objectContaining({
-          isConnected: true,
-          isInternetReachable: true,
-          isOfflineMode: false,
-          offlineModeInSettings: false,
-        }),
-      );
-
-      consoleSpy.mockRestore();
     });
   });
 
-  describe("loadCachedSongs", () => {
-    beforeEach(() => {
-      // Clear all mocks before each test
-      jest.clearAllMocks();
-    });
-
-    it("should load cached songs successfully", async () => {
-      const mockCachedSongs = [
-        {
-          id: "song1",
-          title: "Test Song 1",
-          artist: "Test Artist",
-          album: "Test Album",
-          duration: 180,
-        },
-        {
-          id: "song2",
-          title: "Test Song 2",
-          artist: "Test Artist",
-          album: "Test Album",
-          duration: 200,
-        },
-      ];
-
-      dbManager.getAllCachedSongs.mockResolvedValue(mockCachedSongs);
-
-      await networkSlice.loadCachedSongs();
-
-      expect(dbManager.getAllCachedSongs).toHaveBeenCalled();
-      expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: mockCachedSongs,
+  describe("getAvailableSongs", () => {
+    it("should return all songs when online", async () => {
+      mockGet.mockReturnValue({
+        isOfflineMode: false,
+        songs: mockSongs,
       });
+
+      const availableSongs = await networkSlice.getAvailableSongs();
+
+      expect(availableSongs).toEqual(mockSongs);
     });
 
-    it("should handle empty cached songs", async () => {
+    it("should return only cached songs when offline", async () => {
+      const cachedSongs = [mockSongs[0]];
+
+      mockGet.mockReturnValue({
+        isOfflineMode: true,
+        songs: mockSongs,
+      });
+
+      dbManager.getAllCachedSongs.mockResolvedValue(cachedSongs);
+
+      const availableSongs = await networkSlice.getAvailableSongs();
+
+      expect(availableSongs).toEqual(cachedSongs);
+    });
+
+    it("should return empty array when offline and no cached songs", async () => {
+      mockGet.mockReturnValue({
+        isOfflineMode: true,
+        songs: mockSongs,
+      });
+
       dbManager.getAllCachedSongs.mockResolvedValue([]);
 
-      await networkSlice.loadCachedSongs();
+      const availableSongs = await networkSlice.getAvailableSongs();
 
-      expect(dbManager.getAllCachedSongs).toHaveBeenCalled();
-      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
+      expect(availableSongs).toEqual([]);
     });
 
-    it("should handle errors when loading cached songs", async () => {
+    it("should handle errors when loading cached songs in offline mode", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
+      mockGet.mockReturnValue({
+        isOfflineMode: true,
+        songs: mockSongs,
+      });
+
       dbManager.getAllCachedSongs.mockRejectedValue(new Error("Database error"));
 
-      await networkSlice.loadCachedSongs();
+      const availableSongs = await networkSlice.getAvailableSongs();
 
+      expect(availableSongs).toEqual([]);
       expect(consoleSpy).toHaveBeenCalledWith(
         "Error loading cached songs:",
         expect.any(Error),
       );
       consoleSpy.mockRestore();
     });
-
-    it("should log the number of cached songs loaded", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const mockCachedSongs = [
-        {
-          id: "song1",
-          title: "Test Song 1",
-          artist: "Test Artist",
-          album: "Test Album",
-          duration: 180,
-        },
-        {
-          id: "song2",
-          title: "Test Song 2",
-          artist: "Test Artist",
-          album: "Test Album",
-          duration: 200,
-        },
-      ];
-
-      dbManager.getAllCachedSongs.mockResolvedValue(mockCachedSongs);
-
-      await networkSlice.loadCachedSongs();
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Loaded 2 cached songs for offline use from database",
-      );
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe("getAvailableSongs", () => {
-    it("should return all songs when online", () => {
-      mockGet.mockReturnValue({
-        isOfflineMode: false,
-        songs: mockSongs,
-        cachedSongs: [mockSongs[0]], // Only first song cached
-      });
-
-      const availableSongs = networkSlice.getAvailableSongs();
-
-      expect(availableSongs).toEqual(mockSongs);
-    });
-
-    it("should return only cached songs when offline", () => {
-      const cachedSongs = [mockSongs[0]];
-
-      mockGet.mockReturnValue({
-        isOfflineMode: true,
-        songs: mockSongs,
-        cachedSongs,
-      });
-
-      const availableSongs = networkSlice.getAvailableSongs();
-
-      expect(availableSongs).toEqual(cachedSongs);
-    });
-
-    it("should return empty array when offline and no cached songs", () => {
-      mockGet.mockReturnValue({
-        isOfflineMode: true,
-        songs: mockSongs,
-        cachedSongs: [],
-      });
-
-      const availableSongs = networkSlice.getAvailableSongs();
-
-      expect(availableSongs).toEqual([]);
-    });
   });
 
   describe("Network State Transitions", () => {
     it("should handle transition from online to offline", () => {
       const mockSetUserSettings = jest.fn();
-      const mockLoadCachedSongs = jest.fn();
 
       mockGet.mockReturnValue({
         userSettings: { offlineMode: false, maxCacheSize: 10 },
         setUserSettings: mockSetUserSettings,
-        loadCachedSongs: mockLoadCachedSongs,
+        isOfflineMode: false,
       });
 
       // Simulate going offline
@@ -419,17 +324,15 @@ describe("Network Slice", () => {
         offlineMode: true,
         maxCacheSize: 10,
       });
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
     });
 
     it("should handle transition from offline to online with manual offline mode", () => {
       const mockSetUserSettings = jest.fn();
-      const mockLoadCachedSongs = jest.fn();
 
       mockGet.mockReturnValue({
         userSettings: { offlineMode: true, maxCacheSize: 10 },
         setUserSettings: mockSetUserSettings,
-        loadCachedSongs: mockLoadCachedSongs,
+        isOfflineMode: false,
       });
 
       // Simulate going back online
@@ -446,7 +349,6 @@ describe("Network Slice", () => {
         networkState: onlineState,
         isOfflineMode: true,
       });
-      expect(mockLoadCachedSongs).toHaveBeenCalled();
     });
   });
 });

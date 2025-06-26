@@ -77,12 +77,6 @@ describe("Cache Slice", () => {
     });
   });
 
-  describe("Initial State", () => {
-    it("should have correct initial state", () => {
-      expect(cacheSlice.cachedSongs).toEqual([]);
-    });
-  });
-
   describe("Constants", () => {
     it("should define correct cache directory", () => {
       expect(CACHE_DIRECTORY).toBe(
@@ -100,7 +94,6 @@ describe("Cache Slice", () => {
 
       expect(mockFileSystem.getInfoAsync).toHaveBeenCalledWith(CACHE_DIRECTORY);
       expect(mockFileSystem.deleteAsync).toHaveBeenCalledWith(CACHE_DIRECTORY);
-      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
     });
 
     it("should handle non-existent cache directory", async () => {
@@ -109,7 +102,6 @@ describe("Cache Slice", () => {
       await cacheSlice.clearCache();
 
       expect(mockFileSystem.deleteAsync).not.toHaveBeenCalled();
-      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
     });
 
     it("should handle errors gracefully", async () => {
@@ -490,68 +482,6 @@ describe("Cache Slice", () => {
       const result = await cacheSlice.downloadImage("cover123", "Test Song");
 
       expect(result).toBe("http://example.com/cover/cover123");
-    });
-  });
-
-  describe("loadCachedSongs", () => {
-    beforeEach(() => {
-      mockGet.mockReturnValue({
-        ...mockGet(),
-        getCachedFiles: jest.fn(),
-        loadSongMetadata: jest.fn(),
-      });
-    });
-
-    it("should load cached songs from database", async () => {
-      const mockDbSongs = [
-        {
-          id: "song123",
-          title: "Test Song",
-          artist: "Test Artist",
-          album: "Test Album",
-          duration: 180,
-          coverArt: "cover123",
-          fileSize: 1024,
-          cachedAt: new Date().toISOString(),
-        },
-      ];
-
-      mockDbManager.getAllCachedSongs.mockResolvedValue(mockDbSongs);
-
-      await cacheSlice.loadCachedSongs();
-
-      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
-      expect(mockSet).toHaveBeenCalledWith({
-        cachedSongs: mockDbSongs,
-      });
-    });
-
-    it("should handle empty cached songs from database", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      mockDbManager.getAllCachedSongs.mockResolvedValue([]);
-
-      await cacheSlice.loadCachedSongs();
-
-      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
-      expect(mockSet).toHaveBeenCalledWith({ cachedSongs: [] });
-      expect(consoleSpy).toHaveBeenCalledWith("Loaded 0 cached songs from database");
-      consoleSpy.mockRestore();
-    });
-
-    it("should handle database errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-
-      mockDbManager.getAllCachedSongs.mockRejectedValue(new Error("Database error"));
-
-      await cacheSlice.loadCachedSongs();
-
-      expect(mockDbManager.getAllCachedSongs).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error loading cached songs:",
-        expect.any(Error),
-      );
-      consoleSpy.mockRestore();
     });
   });
 });
