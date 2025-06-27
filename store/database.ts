@@ -687,56 +687,93 @@ class DatabaseManager {
         try {
             const db = await this.ensureDb();
 
-            // Get artist info
-            const artistResult = await db.getFirstAsync<CachedArtistRecord>(
-                'SELECT * FROM artists WHERE id = ?',
+            // Get all data in one query using LEFT JOINs
+            const results = await db.getAllAsync<{
+                // Artist fields
+                artistId: string;
+                artistName: string;
+                artistAlbumCount: number;
+                artistCoverArt: string | null;
+                // Album fields
+                albumId: string | null;
+                albumName: string | null;
+                albumArtist: string | null;
+                albumSongCount: number | null;
+                albumCoverArt: string | null;
+                // Song fields
+                songId: string | null;
+                songTitle: string | null;
+                songCoverArt: string | null;
+                songDuration: number | null;
+            }>(
+                `SELECT 
+                    a.id           as artistId,
+                    a.name         as artistName,
+                    a.albumCount   as artistAlbumCount,
+                    a.coverArt     as artistCoverArt,
+
+                    al.id          as albumId,
+                    al.name        as albumName,
+                    al.artist      as albumArtist,
+                    al.songCount   as albumSongCount,
+                    al.coverArt    as albumCoverArt,
+
+                    s.id           as songId,
+                    s.title        as songTitle,
+                    s.coverArt     as songCoverArt,
+                    s.duration     as songDuration
+                FROM artists a
+                LEFT JOIN albums al ON al.artist = a.name
+                LEFT JOIN songs s ON s.albumId = al.id
+                WHERE a.id = ?
+                ORDER BY al.name, s.title`,
                 [artistId]
             );
 
-            if (!artistResult) {
+            if (results.length === 0) {
                 return null;
             }
 
-            // Get artist's albums
-            const albumResults = await db.getAllAsync<CachedAlbumRecord>(
-                'SELECT * FROM albums WHERE artist = ? ORDER BY name',
-                [artistResult.name]
-            );
+            // Extract artist info from first row
+            const artistInfo = {
+                id: results[0].artistId,
+                name: results[0].artistName,
+                albumCount: results[0].artistAlbumCount,
+                coverArt: results[0].artistCoverArt || undefined
+            };
 
-            const albums = albumResults.map(record => ({
-                id: record.id,
-                name: record.name,
-                artist: record.artist,
-                songCount: record.songCount,
-                coverArt: record.coverArt || undefined
-            }));
+            // Group albums and songs from the flattened results
+            const albumsMap = new Map<string, Album>();
+            const songs: Song[] = [];
 
-            // Get all songs by this artist with artist and album names
-            const songResults = await db.getAllAsync<CachedSongRecord & { artistName: string; albumName: string }>(
-                `SELECT s.*, a.name as artistName, al.name as albumName 
-                 FROM songs s 
-                 JOIN artists a ON s.artistId = a.id 
-                 JOIN albums al ON s.albumId = al.id 
-                 WHERE a.name = ? 
-                 ORDER BY al.name, s.title`,
-                [artistResult.name]
-            );
+            for (const row of results) {
+                // Add album if it exists and not already added
+                if (row.albumId && !albumsMap.has(row.albumId)) {
+                    albumsMap.set(row.albumId, {
+                        id: row.albumId,
+                        name: row.albumName!,
+                        artist: row.albumArtist!,
+                        songCount: row.albumSongCount!,
+                        coverArt: row.albumCoverArt || undefined
+                    });
+                }
 
-            const songs = songResults.map(record => ({
-                id: record.id,
-                title: record.title,
-                artist: record.artistName,
-                album: record.albumName,
-                coverArt: record.coverArt || undefined,
-                duration: record.duration
-            }));
+                // Add song if it exists
+                if (row.songId) {
+                    songs.push({
+                        id: row.songId,
+                        title: row.songTitle!,
+                        artist: artistInfo.name,
+                        album: row.albumName!,
+                        coverArt: row.songCoverArt || undefined,
+                        duration: row.songDuration!
+                    });
+                }
+            }
 
             return {
-                id: artistResult.id,
-                name: artistResult.name,
-                albumCount: artistResult.albumCount,
-                coverArt: artistResult.coverArt || undefined,
-                albums,
+                ...artistInfo,
+                albums: Array.from(albumsMap.values()),
                 songs
             };
         } catch (error) {
