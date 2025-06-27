@@ -599,7 +599,7 @@ class DatabaseManager {
                  JOIN artists a ON s.artistId = a.id 
                  JOIN albums al ON s.albumId = al.id 
                  WHERE s.genre = ? 
-                 ORDER BY a.name, al.name, s.title`,
+                 ORDER BY s.title, a.name, al.name`,
                 [genre]
             );
 

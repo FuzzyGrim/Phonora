@@ -459,7 +459,7 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
         const artistId = `artist_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
         const albumId = `album_${song.album.replace(/\s+/g, '_').toLowerCase()}_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
 
-        // Try to save artist metadata if not already saved
+        // Try to save artist metadata if not already saved, or update album count
         try {
           const existingArtist = await dbManager.getCachedArtistByName(song.artist);
           if (!existingArtist) {
@@ -470,12 +470,23 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
               albumCount: 1, // We'll update this as we cache more songs
               coverArt: song.coverArt,
             });
+          } else {
+            // Check if this is a new album for the artist
+            const existingAlbumForArtist = await dbManager.getCachedAlbumByName(song.album, song.artist);
+            if (!existingAlbumForArtist) {
+              // Increment album count for the artist
+              await dbManager.saveArtistMetadata({
+                ...existingArtist,
+                coverArt: existingArtist.coverArt || undefined,
+                albumCount: existingArtist.albumCount + 1,
+              });
+            }
           }
         } catch (error) {
           console.warn("Could not save artist metadata:", error);
         }
 
-        // Try to save album metadata if not already saved
+        // Try to save album metadata if not already saved, or update song count
         try {
           const existingAlbum = await dbManager.getCachedAlbumByName(song.album, song.artist);
           if (!existingAlbum) {
@@ -488,12 +499,19 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
               songCount: 1, // We'll update this as we cache more songs
               coverArt: song.coverArt,
             });
+          } else {
+            // Increment song count for the album
+            await dbManager.saveAlbumMetadata({
+              ...existingAlbum,
+              coverArt: existingAlbum.coverArt || undefined,
+              songCount: existingAlbum.songCount + 1,
+            });
           }
         } catch (error) {
           console.warn("Could not save album metadata:", error);
         }
 
-        // Try to save genre metadata if not already saved and genre is provided
+        // Try to save genre metadata if not already saved and genre is provided, or update song count
         let genreToSave: string | undefined = undefined;
         if (song.genre) {
           try {
@@ -507,6 +525,12 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
                 id: song.genre,
                 name: song.genre,
                 songCount: 1, // We'll update this as we cache more songs
+              });
+            } else {
+              // Increment song count for the genre
+              await dbManager.saveGenreMetadata({
+                ...existingGenre,
+                songCount: existingGenre.songCount + 1,
               });
             }
             genreToSave = song.genre;
