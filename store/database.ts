@@ -624,42 +624,54 @@ class DatabaseManager {
         try {
             const db = await this.ensureDb();
 
-            // Get album info
-            const albumResult = await db.getFirstAsync<CachedAlbumRecord>(
-                'SELECT * FROM albums WHERE id = ?',
-                [albumId]
-            );
-
-            if (!albumResult) {
-                return null;
-            }
-
-            // Get album songs with artist and album names
-            const songResults = await db.getAllAsync<CachedSongRecord & { artistName: string; albumName: string }>(
-                `SELECT s.*, a.name as artistName, al.name as albumName 
-                 FROM songs s 
-                 JOIN artists a ON s.artistId = a.id 
-                 JOIN albums al ON s.albumId = al.id 
-                 WHERE s.albumId = ? 
+            // Get album info and songs in one query
+            const results = await db.getAllAsync<CachedAlbumRecord & CachedSongRecord & {
+                artistName: string;
+                albumName: string;
+                albumId: string;
+                albumArtist: string;
+                albumCoverArt: string | null;
+            }>(
+                `SELECT 
+                    al.id as albumId, al.name as albumName, al.artist as albumArtist, 
+                    al.songCount, al.coverArt as albumCoverArt, al.year, al.genre as albumGenre,
+                    s.id, s.title, s.coverArt, s.duration, s.fileSize, s.cachedAt, s.artistId, s.albumId, s.genre,
+                    a.name as artistName
+                 FROM albums al
+                 LEFT JOIN songs s ON s.albumId = al.id 
+                 LEFT JOIN artists a ON s.artistId = a.id
+                 WHERE al.id = ? 
                  ORDER BY s.title`,
                 [albumId]
             );
 
-            const songs = songResults.map(record => ({
-                id: record.id,
-                title: record.title,
-                artist: record.artistName,
-                album: record.albumName,
-                coverArt: record.coverArt || undefined,
-                duration: record.duration
-            }));
+            if (results.length === 0) {
+                return null;
+            }
+
+            // Extract album info from first row
+            const albumInfo = {
+                id: results[0].albumId,
+                name: results[0].albumName,
+                artist: results[0].albumArtist,
+                songCount: results[0].songCount,
+                coverArt: results[0].albumCoverArt || undefined
+            };
+
+            // Extract songs (filter out rows where song id is null in case album has no songs)
+            const songs = results
+                .filter(row => row.id) // Only rows with actual songs
+                .map(record => ({
+                    id: record.id,
+                    title: record.title,
+                    artist: record.artistName,
+                    album: record.albumName,
+                    coverArt: record.coverArt || undefined,
+                    duration: record.duration
+                }));
 
             return {
-                id: albumResult.id,
-                name: albumResult.name,
-                artist: albumResult.artist,
-                songCount: albumResult.songCount,
-                coverArt: albumResult.coverArt || undefined,
+                ...albumInfo,
                 songs
             };
         } catch (error) {
