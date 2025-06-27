@@ -380,31 +380,29 @@ class DatabaseManager {
         try {
             const db = await this.ensureDb();
             const searchPattern = `%${query.toLowerCase()}%`;
+            
 
-            // Search songs with artist and album names
             const songResults = await db.getAllAsync<CachedSongRecord & { artistName: string; albumName: string }>(
                 `SELECT s.*, a.name as artistName, al.name as albumName 
                  FROM songs s 
                  JOIN artists a ON s.artistId = a.id 
                  JOIN albums al ON s.albumId = al.id 
-                 WHERE LOWER(s.title) LIKE ? OR LOWER(a.name) LIKE ? OR LOWER(al.name) LIKE ?
+                 WHERE LOWER(s.title) LIKE ?
                  ORDER BY s.title`,
-                [searchPattern, searchPattern, searchPattern]
-            );
-
-            // Search artists
-            const artistResults = await db.getAllAsync<CachedArtistRecord>(
-                `SELECT * FROM artists 
-         WHERE LOWER(name) LIKE ?
-         ORDER BY name`,
                 [searchPattern]
             );
 
-            // Search albums
+            const artistResults = await db.getAllAsync<CachedArtistRecord>(
+                `SELECT * FROM artists 
+                 WHERE LOWER(name) LIKE ?
+                 ORDER BY name`,
+                [searchPattern]
+            );
+
             const albumResults = await db.getAllAsync<CachedAlbumRecord>(
                 `SELECT * FROM albums 
-         WHERE LOWER(name) LIKE ? OR LOWER(artist) LIKE ?
-         ORDER BY name`,
+                 WHERE LOWER(name) LIKE ? OR LOWER(artist) LIKE ?
+                 ORDER BY name`,
                 [searchPattern, searchPattern]
             );
 
