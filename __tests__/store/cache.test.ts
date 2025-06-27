@@ -4,7 +4,10 @@
 
 import * as FileSystem from "expo-file-system";
 import { createCacheSlice, CACHE_DIRECTORY } from "../../store/cache";
-import { Song, CachedFileInfo } from "../../store/types";
+import { Song } from "../../store/types";
+
+// Import the mocked database manager
+import { dbManager } from "../../store/database";
 
 // Mock FileSystem
 jest.mock("expo-file-system");
@@ -22,9 +25,6 @@ jest.mock("../../store/database", () => ({
 }));
 
 const mockFileSystem = FileSystem as jest.Mocked<typeof FileSystem>;
-
-// Import the mocked database manager
-import { dbManager } from "../../store/database";
 const mockDbManager = dbManager as jest.Mocked<typeof dbManager>;
 
 describe("Cache Slice", () => {

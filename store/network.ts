@@ -1,6 +1,5 @@
 import NetInfo from "@react-native-community/netinfo";
-import { NetworkState, Song } from "./types";
-import { dbManager } from "./database";
+import { NetworkState } from "./types";
 
 /**
  * Network slice interface for type safety
@@ -66,11 +65,7 @@ export const createNetworkSlice = (set: any, get: any): NetworkSlice => ({
    * Update network state and handle offline mode automatically
    */
   updateNetworkState: (networkState: NetworkState) => {
-    const {
-      userSettings,
-      setUserSettings,
-      isOfflineMode: currentOfflineMode,
-    } = get();
+    const { userSettings, setUserSettings } = get();
 
     // Check if we have no internet connection
     const hasNoInternet =

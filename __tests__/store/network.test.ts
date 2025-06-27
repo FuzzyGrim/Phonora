@@ -18,9 +18,6 @@ jest.mock("../../store/database", () => ({
 
 const mockNetInfo = NetInfo as jest.Mocked<typeof NetInfo>;
 
-// Get the mocked dbManager
-const { dbManager } = require("../../store/database");
-
 describe("Network Slice", () => {
   let networkSlice: any;
   let mockSet: jest.Mock;
@@ -85,7 +82,7 @@ describe("Network Slice", () => {
       };
 
       mockNetInfo.fetch.mockResolvedValue(mockNetworkState as any);
-      mockNetInfo.addEventListener.mockReturnValue(() => { });
+      mockNetInfo.addEventListener.mockReturnValue(() => {});
 
       const mockUpdateNetworkState = jest.fn();
       mockGet.mockReturnValue({

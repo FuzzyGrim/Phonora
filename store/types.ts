@@ -136,8 +136,6 @@ export type PlaylistSource =
  */
 export type RepeatMode = "off" | "one" | "all";
 
-
-
 // Default settings when no user preferences are saved
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   offlineMode: false,
