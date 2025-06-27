@@ -71,7 +71,6 @@ describe("Cache Slice", () => {
           CACHE_DIRECTORY + `${fileId}.${extension}`,
       ),
       songs: [mockSong],
-      cachedSongs: [],
       saveSongMetadata: jest.fn().mockResolvedValue(undefined),
       initializeDatabase: jest.fn().mockResolvedValue(undefined),
     });

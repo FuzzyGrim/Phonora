@@ -47,9 +47,11 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
   };
 
   // Initialize database asynchronously
+  // Initialize database when the slice is created
   initDb();
 
   return {
+
     /**
      * Clear all cached files and data
      */
@@ -378,17 +380,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
             // Save song metadata to database
             await get().saveSongMetadata(song, actualFileSize);
 
-            // Add to cached songs list if not already there
-            const { cachedSongs } = get();
-            const isAlreadyInList = cachedSongs.some(
-              (s: Song) => s.id === song.id,
-            );
-            if (!isAlreadyInList) {
-              set((state: any) => ({
-                cachedSongs: [...state.cachedSongs, song],
-              }));
-            }
-
             return filePath;
           } else {
             console.error("Failed to download song:", downloadResult.status);
@@ -551,5 +542,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
         console.error("Error initializing database:", error);
       }
     },
+
   };
 };
