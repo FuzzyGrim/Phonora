@@ -125,8 +125,10 @@ describe("HomeScreen Integration Tests", () => {
 
     it("should show empty state message for offline mode when no cached songs", () => {
       // Mock dbManager to return empty array for cached songs
-      const mockDbManager = require("@/store/database");
-      mockDbManager.dbManager.getAllCachedSongs = jest.fn(() => Promise.resolve([]));
+      const mockDbManager = jest.requireMock("@/store/database");
+      mockDbManager.dbManager.getAllCachedSongs = jest.fn(() =>
+        Promise.resolve([]),
+      );
 
       mockStore.mockReturnValue({
         ...defaultMockStore,

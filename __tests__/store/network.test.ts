@@ -18,9 +18,6 @@ jest.mock("../../store/database", () => ({
 
 const mockNetInfo = NetInfo as jest.Mocked<typeof NetInfo>;
 
-// Get the mocked dbManager
-const { dbManager } = require("../../store/database");
-
 describe("Network Slice", () => {
   let networkSlice: any;
   let mockSet: jest.Mock;

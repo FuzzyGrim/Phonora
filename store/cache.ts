@@ -51,7 +51,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
   initDb();
 
   return {
-
     /**
      * Clear all cached files and data
      */
@@ -78,7 +77,10 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
     /**
      * Check if a file with given ID and extension is cached
      */
-    isFileCached: async (fileId: string, extension: string): Promise<boolean> => {
+    isFileCached: async (
+      fileId: string,
+      extension: string,
+    ): Promise<boolean> => {
       try {
         const filePath = get().getCachedFilePath(fileId, extension);
         const fileInfo = await FileSystem.getInfoAsync(filePath);
@@ -213,9 +215,6 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
         console.log(
           `Starting cache cleanup to free ${(requiredSpace / (1024 * 1024)).toFixed(2)} MB`,
         );
-
-        // Get all cached files sorted by modification time (oldest first)
-        const cachedFiles = await get().getCachedFiles();
 
         // Calculate how much space we need to free
         const currentCacheSize = await get().getCacheSize();
@@ -375,7 +374,8 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
 
             // Get the actual file size
             const fileInfo = await FileSystem.getInfoAsync(filePath);
-            const actualFileSize = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
+            const actualFileSize =
+              fileInfo.exists && "size" in fileInfo ? fileInfo.size : 0;
 
             // Save song metadata to database
             await get().saveSongMetadata(song, actualFileSize);
@@ -456,12 +456,14 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
     saveSongMetadata: async (song: Song, fileSize: number = 0) => {
       try {
         // Generate consistent IDs
-        const artistId = `artist_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
-        const albumId = `album_${song.album.replace(/\s+/g, '_').toLowerCase()}_${song.artist.replace(/\s+/g, '_').toLowerCase()}`;
+        const artistId = `artist_${song.artist.replace(/\s+/g, "_").toLowerCase()}`;
+        const albumId = `album_${song.album.replace(/\s+/g, "_").toLowerCase()}_${song.artist.replace(/\s+/g, "_").toLowerCase()}`;
 
         // Try to save artist metadata if not already saved, or update album count
         try {
-          const existingArtist = await dbManager.getCachedArtistByName(song.artist);
+          const existingArtist = await dbManager.getCachedArtistByName(
+            song.artist,
+          );
           if (!existingArtist) {
             // Create a basic artist record from song data
             await dbManager.saveArtistMetadata({
@@ -472,7 +474,10 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
             });
           } else {
             // Check if this is a new album for the artist
-            const existingAlbumForArtist = await dbManager.getCachedAlbumByName(song.album, song.artist);
+            const existingAlbumForArtist = await dbManager.getCachedAlbumByName(
+              song.album,
+              song.artist,
+            );
             if (!existingAlbumForArtist) {
               // Increment album count for the artist
               await dbManager.saveArtistMetadata({
@@ -488,7 +493,10 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
 
         // Try to save album metadata if not already saved, or update song count
         try {
-          const existingAlbum = await dbManager.getCachedAlbumByName(song.album, song.artist);
+          const existingAlbum = await dbManager.getCachedAlbumByName(
+            song.album,
+            song.artist,
+          );
           if (!existingAlbum) {
             // Create a basic album record from song data
             await dbManager.saveAlbumMetadata({
@@ -517,7 +525,9 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
           try {
             // Check if genre already exists in database
             const existingGenres = await dbManager.getAllCachedGenres();
-            const existingGenre = existingGenres.find(g => g.name === song.genre);
+            const existingGenre = existingGenres.find(
+              (g) => g.name === song.genre,
+            );
 
             if (!existingGenre) {
               // Create a basic genre record
@@ -566,6 +576,5 @@ export const createCacheSlice = (set: any, get: any): CacheSlice => {
         console.error("Error initializing database:", error);
       }
     },
-
   };
 };

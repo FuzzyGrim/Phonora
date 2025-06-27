@@ -3,11 +3,7 @@
  */
 
 import { createAudioPlayer, setAudioModeAsync, AudioStatus } from "expo-audio";
-import {
-  Song,
-  PlaybackState,
-  RepeatMode,
-} from "./types";
+import { Song, PlaybackState, RepeatMode } from "./types";
 
 /**
  * Playback slice for the store
@@ -23,10 +19,7 @@ export interface PlaybackSlice {
 
   // Actions
   playSong: (song: Song) => Promise<void>;
-  playSongFromSource: (
-    song: Song,
-    sourceSongs: Song[],
-  ) => Promise<void>;
+  playSongFromSource: (song: Song, sourceSongs: Song[]) => Promise<void>;
   pauseSong: () => Promise<void>;
   resumeSong: () => Promise<void>;
   stopSong: () => Promise<void>;
@@ -112,12 +105,12 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         const audioCachePromise = isCached
           ? Promise.resolve(getCachedFilePath(song.id, "mp3"))
           : downloadSong(song).catch((err: any) => {
-            console.warn(
-              `Background audio caching failed for ${song.title}:`,
-              err,
-            );
-            return getStreamUrl(song.id);
-          });
+              console.warn(
+                `Background audio caching failed for ${song.title}:`,
+                err,
+              );
+              return getStreamUrl(song.id);
+            });
 
         // If the song has cover art, cache it also
         let imageCachePromise = Promise.resolve();
@@ -127,7 +120,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
             // Download image in the background, don't await
             // Image download will skip cache management and use the song's cleanup
             imageCachePromise = downloadImage(song.coverArt, song.title)
-              .then(() => { })
+              .then(() => {})
               .catch((err: any) =>
                 console.warn(
                   `Background image caching failed for ${song.coverArt}:`,
@@ -145,7 +138,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           console.log(`Playing cached song: ${song.title}`);
 
           // Let image download in background
-          imageCachePromise.catch(() => { });
+          imageCachePromise.catch(() => {});
         } else {
           // Use streaming URL while waiting for download
           const streamUrl = getStreamUrl(song.id);
@@ -153,7 +146,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
           // Let both downloads happen in background
           Promise.all([audioCachePromise, imageCachePromise])
-            .catch(() => { }) // Ignore errors to prevent app crashes
+            .catch(() => {}) // Ignore errors to prevent app crashes
             .finally(() =>
               console.log(
                 `Background caching operations completed for ${song.title}`,
@@ -245,10 +238,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Play a song from a specific source (search results, library, album, etc.)
    * Sets the current playlist source for proper next/previous navigation
    */
-  playSongFromSource: async (
-    song: Song,
-    sourceSongs: Song[],
-  ) => {
+  playSongFromSource: async (song: Song, sourceSongs: Song[]) => {
     // Set the current playlist source
     set({
       currentSongsList: sourceSongs,
@@ -346,7 +336,14 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { currentSongsList, playback, songs, repeatMode, isShuffle, hasRepeatedOnce } = get();
+    const {
+      currentSongsList,
+      playback,
+      songs,
+      repeatMode,
+      isShuffle,
+      hasRepeatedOnce,
+    } = get();
     console.log("skipToNext called", {
       hasSong: !!playback.currentSong,
       hasPlaylist: !!currentSongsList,
@@ -371,7 +368,9 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
         await get().playSong(playback.currentSong);
         return;
       } else {
-        console.log("Repeat one mode: already repeated once, proceeding to next song");
+        console.log(
+          "Repeat one mode: already repeated once, proceeding to next song",
+        );
         // Continue to normal next song logic below
       }
     }
