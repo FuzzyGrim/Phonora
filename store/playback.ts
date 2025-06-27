@@ -19,6 +19,7 @@ export interface PlaybackSlice {
   isRepeat: boolean;
   isShuffle: boolean;
   repeatMode: RepeatMode;
+  hasRepeatedOnce: boolean;
 
   // Actions
   playSong: (song: Song) => Promise<void>;
@@ -56,6 +57,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
   isRepeat: false,
   isShuffle: false,
   repeatMode: "off",
+  hasRepeatedOnce: false,
 
   /**
    * Play a song by creating a new Audio.Sound instance
@@ -250,6 +252,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     // Set the current playlist source
     set({
       currentSongsList: sourceSongs,
+      hasRepeatedOnce: false, // Reset repeat tracking when starting from a new source
     });
 
     // Then play the song using the regular playSong method
@@ -300,6 +303,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
           position: 0,
           duration: 0,
         },
+        hasRepeatedOnce: false, // Reset repeat tracking when stopping
       });
     }
   },
@@ -342,7 +346,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
    * Skip to the next song in the playlist
    */
   skipToNext: async () => {
-    const { currentSongsList, playback, songs, repeatMode, isShuffle } = get();
+    const { currentSongsList, playback, songs, repeatMode, isShuffle, hasRepeatedOnce } = get();
     console.log("skipToNext called", {
       hasSong: !!playback.currentSong,
       hasPlaylist: !!currentSongsList,
@@ -350,6 +354,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
       globalSongsLength: songs?.length || 0,
       repeatMode,
       isShuffle,
+      hasRepeatedOnce,
     });
 
     // Check if we have a current song
@@ -358,11 +363,17 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
       return;
     }
 
-    // Handle repeat one mode - just replay the same song
+    // Handle repeat one mode - replay the same song only once, then continue
     if (repeatMode === "one") {
-      console.log("Repeat one mode: replaying current song");
-      await get().playSong(playback.currentSong);
-      return;
+      if (!hasRepeatedOnce) {
+        console.log("Repeat one mode: replaying current song (first repeat)");
+        set({ hasRepeatedOnce: true });
+        await get().playSong(playback.currentSong);
+        return;
+      } else {
+        console.log("Repeat one mode: already repeated once, proceeding to next song");
+        // Continue to normal next song logic below
+      }
     }
 
     // Get the songs list to work with
@@ -410,6 +421,8 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
     // Play the next song if we found one
     if (nextSong) {
+      // Reset repeat tracking when moving to a different song
+      set({ hasRepeatedOnce: false });
       await get().playSong(nextSong);
     } else {
       console.log("skipToNext: No next song to play");
@@ -472,6 +485,8 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
 
     // Play the previous song if we found one
     if (previousSong) {
+      // Reset repeat tracking when moving to a different song
+      set({ hasRepeatedOnce: false });
       await get().playSong(previousSong);
     }
   },
@@ -564,6 +579,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
       return {
         repeatMode: newRepeatMode,
         isRepeat: newIsRepeat,
+        hasRepeatedOnce: false, // Reset repeat tracking when toggling modes
         // If enabling repeat, disable shuffle
         isShuffle: newIsRepeat ? false : state.isShuffle,
       };
@@ -577,6 +593,7 @@ export const createPlaybackSlice = (set: any, get: any): PlaybackSlice => ({
     set((state: any) => ({
       repeatMode: mode,
       isRepeat: mode !== "off",
+      hasRepeatedOnce: false, // Reset repeat tracking when changing modes
       // If enabling repeat, disable shuffle
       isShuffle: mode !== "off" ? false : state.isShuffle,
     }));

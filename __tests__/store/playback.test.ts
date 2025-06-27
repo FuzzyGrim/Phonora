@@ -95,6 +95,7 @@ describe("Playback Slice", () => {
       expect(playbackSlice.isRepeat).toBe(false);
       expect(playbackSlice.isShuffle).toBe(false);
       expect(playbackSlice.repeatMode).toBe("off");
+      expect(playbackSlice.hasRepeatedOnce).toBe(false);
     });
   });
 
@@ -277,6 +278,7 @@ describe("Playback Slice", () => {
 
       expect(mockSet).toHaveBeenCalledWith({
         currentSongsList: mockSongs,
+        hasRepeatedOnce: false,
       });
       expect(mockPlaySong).toHaveBeenCalledWith(mockSong);
     });
@@ -348,6 +350,7 @@ describe("Playback Slice", () => {
           position: 0,
           duration: 0,
         },
+        hasRepeatedOnce: false,
       });
     });
   });
@@ -399,12 +402,37 @@ describe("Playback Slice", () => {
         currentSongsList: mockSongs,
         repeatMode: "one",
         isShuffle: false,
+        hasRepeatedOnce: false,
         playSong: mockPlaySong,
       });
 
       await playbackSlice.skipToNext();
 
+      // Should set hasRepeatedOnce to true and replay the same song
+      expect(mockSet).toHaveBeenCalledWith({ hasRepeatedOnce: true });
       expect(mockPlaySong).toHaveBeenCalledWith(mockSong); // Same song
+    });
+
+    it("should proceed to next song when repeat one has already repeated", async () => {
+      const mockPlaySong = jest.fn();
+      mockGet.mockReturnValue({
+        playback: {
+          isPlaying: true,
+          currentSong: mockSong,
+          player: mockPlayer,
+        },
+        currentSongsList: mockSongs,
+        repeatMode: "one",
+        isShuffle: false,
+        hasRepeatedOnce: true,
+        playSong: mockPlaySong,
+      });
+
+      await playbackSlice.skipToNext();
+
+      // Should reset hasRepeatedOnce and play next song
+      expect(mockSet).toHaveBeenCalledWith({ hasRepeatedOnce: false });
+      expect(mockPlaySong).toHaveBeenCalledWith(mockSongs[1]); // Next song
     });
 
     it("should handle repeat all mode at end of playlist", async () => {
